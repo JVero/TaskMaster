@@ -16,7 +16,7 @@ export default function ListView({
   openCtx, openTimeline, toggleDark, dark,
   saveAll, dragId, setDragId, dragOver, setDragOver,
   handleDragStart, handleDragOver, handleDrop, handleDragEnd,
-  moveCtx, quickLog, setQuickLog, mut, signOut,
+  moveCtx, quickLog, setQuickLog, mut, signOut, demo,
   S, maxW, viewFade, syncState, undoAction,
   setData, setActiveId, setView,
 }) {
@@ -27,6 +27,11 @@ export default function ListView({
     <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
       <SyncPill syncState={syncState} />
       <UndoToast undoAction={undoAction} />
+      {demo && (
+        <div style={{ background: "#EDF5F0", borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 13, color: "#4A7C5C", border: "1px solid #bbf7d0", textAlign: "center" }}>
+          Demo mode — changes are saved locally in your browser
+        </div>
+      )}
       {loadError && (
         <div style={{ background: "#fef3c7", borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 13, color: "#92400e", border: "1px solid #fde68a" }}>
           {loadError}
@@ -207,7 +212,7 @@ export default function ListView({
         }} style={{ background: "none", border: "none", color: "#D6D3D1", fontSize: 11, cursor: "pointer" }}>Reset to defaults</button>
         <p style={{ fontSize: 11, color: "#D6D3D1", margin: "8px 0 0" }}>Press <kbd style={{ background: "#E7E5E4", padding: "1px 5px", borderRadius: 3, fontSize: 11, border: "1px solid #D6D3D1" }}>L</kbd> to quick-log</p>
         <button onClick={signOut}
-          style={{ background: "none", border: "none", color: "#D6D3D1", fontSize: 11, cursor: "pointer", marginTop: 8 }}>Sign out</button>
+          style={{ background: "none", border: "none", color: "#D6D3D1", fontSize: 11, cursor: "pointer", marginTop: 8 }}>{demo ? "Exit demo" : "Sign out"}</button>
       </div>
 
       <QuickLogModal quickLog={quickLog} setQuickLog={setQuickLog} live={live} mut={mut} S={S} />

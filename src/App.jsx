@@ -84,7 +84,9 @@ function AuthGate({ children }) {
   );
 }
 
-function Tracker() {
+const DEMO_KEY = "tracker-demo-data";
+
+function Tracker({ demo }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -130,6 +132,15 @@ function Tracker() {
 
   // Load data
   useEffect(() => {
+    if (demo) {
+      try {
+        const saved = localStorage.getItem(DEMO_KEY);
+        if (saved) { const parsed = JSON.parse(saved); if (parsed?.contexts) { if (!parsed.order) parsed.order = parsed.contexts.map(c => c.id); setData(parsed); setLoading(false); return; } }
+      } catch {}
+      setData(SEED);
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const loaded = await loadData(SEED);
@@ -142,16 +153,16 @@ function Tracker() {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [demo]);
 
-  // Sync status + realtime
-  useEffect(() => onSyncStatus(setSyncState), []);
-  useEffect(() => onRemoteUpdate((remoteData) => {
+  // Sync status + realtime (skip in demo mode)
+  useEffect(() => { if (!demo) return onSyncStatus(setSyncState); }, [demo]);
+  useEffect(() => { if (!demo) return onRemoteUpdate((remoteData) => {
     if (remoteData && remoteData.contexts) {
       if (!remoteData.order) remoteData.order = remoteData.contexts.map(c => c.id);
       setData(remoteData);
     }
-  }), []);
+  }); }, [demo]);
 
   const toggleDark = () => setDark(d => { const v = !d; try { localStorage.setItem("tracker-dark", v ? "1" : "0"); } catch {} return v; });
 
@@ -173,7 +184,10 @@ function Tracker() {
   }, [view, quickLog]);
 
   // Mutation helpers
-  const persist = useCallback((d) => { saveData(d); }, []);
+  const persist = useCallback((d) => {
+    if (demo) { try { localStorage.setItem(DEMO_KEY, JSON.stringify(d)); } catch {} }
+    else { saveData(d); }
+  }, [demo]);
   const mut = useCallback((ctxId, fn) => {
     setData(prev => {
       const next = { ...prev, contexts: prev.contexts.map(c => c.id === ctxId ? { ...c, ...fn(c) } : c) };
@@ -272,7 +286,7 @@ function Tracker() {
     });
   };
 
-  const signOut = () => supabase.auth.signOut();
+  const signOut = demo ? () => { window.location.href = "/"; } : () => supabase.auth.signOut();
 
   // Loading state
   if (loading) return (
@@ -316,13 +330,16 @@ function Tracker() {
       openCtx={openCtx} openTimeline={openTimeline} toggleDark={toggleDark} dark={dark}
       saveAll={saveAll} dragId={dragId} setDragId={setDragId} dragOver={dragOver} setDragOver={setDragOver}
       handleDragStart={handleDragStart} handleDragOver={handleDragOver} handleDrop={handleDrop} handleDragEnd={handleDragEnd}
-      moveCtx={moveCtx} quickLog={quickLog} setQuickLog={setQuickLog} mut={mut} signOut={signOut}
+      moveCtx={moveCtx} quickLog={quickLog} setQuickLog={setQuickLog} mut={mut} signOut={signOut} demo={demo}
       S={S} maxW={maxW} viewFade={viewFade} syncState={syncState} undoAction={undoAction}
       setData={setData} setActiveId={setActiveId} setView={setView}
     />
   );
 }
 
+const DEMO = window.location.pathname.startsWith("/demo");
+
 export default function App() {
+  if (DEMO) return <Tracker demo />;
   return <AuthGate><Tracker /></AuthGate>;
 }
