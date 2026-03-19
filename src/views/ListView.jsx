@@ -6,7 +6,7 @@ import { uid, today, staleness } from "../lib/helpers";
 import { saveData } from "../lib/storage";
 import SyncPill from "../components/SyncPill";
 import UndoToast from "../components/UndoToast";
-import QuickLogModal from "../components/QuickLogModal";
+
 
 export default function ListView({
   live, dormant, liveAll, data, loadError,
@@ -215,7 +215,7 @@ export default function ListView({
           style={{ background: "none", border: "none", color: "#D6D3D1", fontSize: 11, cursor: "pointer", marginTop: 8 }}>{demo ? "Exit demo" : "Sign out"}</button>
       </div>
 
-      <QuickLogModal quickLog={quickLog} setQuickLog={setQuickLog} live={live} mut={mut} S={S} />
+
     </div></div>
   );
 }

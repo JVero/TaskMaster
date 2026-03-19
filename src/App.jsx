@@ -6,6 +6,7 @@ import { SANS, SERIF, makeStyles } from "./lib/styles";
 import ListView from "./views/ListView";
 import DetailView from "./views/DetailView";
 import TimelineView from "./views/TimelineView";
+import QuickLogModal from "./components/QuickLogModal";
 
 // --- Supabase Auth gate ---
 function AuthGate({ children }) {
@@ -172,10 +173,8 @@ function Tracker({ demo }) {
       if (e.key === "l" && !e.ctrlKey && !e.metaKey && !e.altKey) {
         const tag = document.activeElement?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        if (view === "list") {
-          e.preventDefault();
-          setQuickLog({ ctxId: "", text: "", dur: "session" });
-        }
+        e.preventDefault();
+        setQuickLog({ ctxId: view === "detail" && activeId ? activeId : "", text: "", dur: "session" });
       }
       if (e.key === "Escape" && quickLog) setQuickLog(null);
     };
@@ -313,16 +312,13 @@ function Tracker({ demo }) {
   });
 
   // View routing
+  let viewEl;
   if (view === "detail" && ctx) {
-    return <DetailView ctx={ctx} mut={mut} doWithUndo={doWithUndo} goBack={goBack} S={S} maxW={maxW} viewFade={viewFade} syncState={syncState} undoAction={undoAction} />;
-  }
-
-  if (view === "timeline") {
-    return <TimelineView data={data} openCtx={openCtx} goBack={goBack} S={S} maxW={maxW} viewFade={viewFade} syncState={syncState} undoAction={undoAction} />;
-  }
-
-  return (
-    <ListView
+    viewEl = <DetailView ctx={ctx} mut={mut} doWithUndo={doWithUndo} goBack={goBack} S={S} maxW={maxW} viewFade={viewFade} syncState={syncState} undoAction={undoAction} />;
+  } else if (view === "timeline") {
+    viewEl = <TimelineView data={data} openCtx={openCtx} goBack={goBack} S={S} maxW={maxW} viewFade={viewFade} syncState={syncState} undoAction={undoAction} />;
+  } else {
+    viewEl = <ListView
       live={live} dormant={dormant} liveAll={liveAll} data={data} loadError={loadError}
       search={search} setSearch={setSearch} filterDomain={filterDomain} setFilterDomain={setFilterDomain}
       showNew={showNew} setShowNew={setShowNew} newName={newName} setNewName={setNewName} newDomain={newDomain} setNewDomain={setNewDomain}
@@ -333,8 +329,13 @@ function Tracker({ demo }) {
       moveCtx={moveCtx} quickLog={quickLog} setQuickLog={setQuickLog} mut={mut} signOut={signOut} demo={demo}
       S={S} maxW={maxW} viewFade={viewFade} syncState={syncState} undoAction={undoAction}
       setData={setData} setActiveId={setActiveId} setView={setView}
-    />
-  );
+    />;
+  }
+
+  return <>
+    {viewEl}
+    <QuickLogModal quickLog={quickLog} setQuickLog={setQuickLog} live={liveAll} mut={mut} S={S} />
+  </>;
 }
 
 const DEMO = window.location.pathname.startsWith("/demo");
