@@ -253,8 +253,19 @@ function Tracker() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [view, setView] = useState("list");
-  const [activeId, setActiveId] = useState(null);
+  // Restore view from URL hash on load
+  const [view, setView] = useState(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === "timeline") return "timeline";
+    if (hash && hash !== "") return "detail";
+    return "list";
+  });
+  const [activeId, setActiveId] = useState(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash && hash !== "" && hash !== "timeline") return hash;
+    return null;
+  });
+  const [winWidth, setWinWidth] = useState(() => window.innerWidth);
   const [editReentry, setEditReentry] = useState(false);
   const [reentryDraft, setReentryDraft] = useState("");
   const [newTask, setNewTask] = useState("");
@@ -281,7 +292,15 @@ function Tracker() {
   const [dark, setDark] = useState(() => {
     try { return localStorage.getItem("tracker-dark") === "1"; } catch { return false; }
   });
-  const S = useMemo(() => makeStyles(dark), [dark]);
+  // Track window width for responsive layout
+  useEffect(() => {
+    const onResize = () => setWinWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const maxW = winWidth >= 1200 ? 800 : winWidth >= 900 ? 700 : 560;
+
+  const S = useMemo(() => makeStyles(dark, maxW), [dark, maxW]);
   const taRef = useRef(null);
   const exportRef = useRef(null);
 
@@ -360,6 +379,18 @@ function Tracker() {
     fadeTo(() => { setView("timeline"); setActiveId(null); });
     if (!skipPush) window.history.pushState({ view: "timeline" }, "", "#timeline");
   };
+
+  // Set initial history state to match URL hash on load
+  useEffect(() => {
+    const hash = window.location.hash.slice(1);
+    if (hash === "timeline") {
+      window.history.replaceState({ view: "timeline" }, "", "#timeline");
+    } else if (hash && hash !== "") {
+      window.history.replaceState({ view: "detail", id: hash }, "", `#${hash}`);
+    } else {
+      window.history.replaceState({ view: "list" }, "", "#");
+    }
+  }, []);
 
   // Browser back/forward button support
   useEffect(() => {
@@ -500,7 +531,7 @@ function Tracker() {
       <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
         {syncPill}{undoToast}{undoToast}
         <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 0", padding: "calc(12px + env(safe-area-inset-top, 0px)) 20px 10px", borderBottom: `1px solid ${S.border}` }}>
-          <div style={{ maxWidth: 560, margin: "0 auto" }}>
+          <div style={{ maxWidth: maxW, margin: "0 auto" }}>
             <button onClick={goBack} style={{ ...S.back, margin: 0 }}>&larr; Projects</button>
           </div>
         </div>
@@ -718,7 +749,7 @@ function Tracker() {
       <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
         {syncPill}{undoToast}
         <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 16px", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 12px", borderBottom: `1px solid ${S.border}` }}>
-          <div style={{ maxWidth: 560, margin: "0 auto" }}>
+          <div style={{ maxWidth: maxW, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
               <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>This week</h1>
               <button onClick={goBack} style={{ ...S.textBtn, fontSize: 13 }}>Back to projects</button>
@@ -793,7 +824,7 @@ function Tracker() {
         </div>
       )}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 16px", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 12px", borderBottom: `1px solid ${S.border}` }}>
-        <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        <div style={{ maxWidth: maxW, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>Projects</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -1014,7 +1045,7 @@ const SERIF = '"Newsreader", ui-serif, Georgia, Cambria, serif';
 const SANS = '-apple-system, system-ui, "Segoe UI", sans-serif';
 const ACCENT = { light: "#C15F3C", dark: "#D97756" };
 
-function makeStyles(dark) {
+function makeStyles(dark, maxW = 560) {
   const accent = dark ? ACCENT.dark : ACCENT.light;
   const bg = dark ? "#1C1917" : "#FAF9F6";
   const card = dark ? "#292524" : "#FFFFFF";
@@ -1026,7 +1057,7 @@ function makeStyles(dark) {
   const inputBg = dark ? "#292524" : "#FFFFFF";
   return {
     shell: { minHeight: "100vh", background: bg, fontFamily: SANS, padding: "calc(24px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px))", transition: "opacity 0.12s ease, background 0.3s ease" },
-    wrap: { maxWidth: 560, margin: "0 auto" },
+    wrap: { maxWidth: maxW, margin: "0 auto", transition: "max-width 0.3s ease" },
     section: { background: card, borderRadius: 8, padding: "16px 18px", marginBottom: 14, border: `1px solid ${border}` },
     h2: { margin: 0, fontSize: 22, fontWeight: 700, color: text, fontFamily: SERIF, letterSpacing: "-0.01em" },
     h3: { margin: 0, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: textMuted },
