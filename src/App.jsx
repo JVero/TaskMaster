@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { loadData, saveData, onSyncStatus } from "./lib/storage";
+import { loadData, saveData, onSyncStatus, onRemoteUpdate } from "./lib/storage";
 import { supabase } from "./lib/supabase";
 
 // --- Supabase Auth gate ---
@@ -301,6 +301,12 @@ function Tracker() {
   }, []);
 
   useEffect(() => onSyncStatus(setSyncState), []);
+  useEffect(() => onRemoteUpdate((remoteData) => {
+    if (remoteData && remoteData.contexts) {
+      if (!remoteData.order) remoteData.order = remoteData.contexts.map(c => c.id);
+      setData(remoteData);
+    }
+  }), []);
   const toggleDark = () => setDark(d => { const v = !d; try { localStorage.setItem("tracker-dark", v ? "1" : "0"); } catch {} return v; });
 
   // Quick-log keyboard shortcut
@@ -490,7 +496,12 @@ function Tracker() {
             {!editReentry && <button onClick={() => { setEditReentry(true); setReentryDraft(ctx.reentry); setTimeout(() => taRef.current?.focus(), 30); }} style={S.textBtn}>Edit</button>}
           </div>
           {editReentry ? (<>
-            <textarea ref={taRef} value={reentryDraft} onChange={e => setReentryDraft(e.target.value)} style={S.ta} />
+            <textarea ref={taRef} value={reentryDraft} onChange={e => {
+              setReentryDraft(e.target.value);
+              e.target.style.height = "auto";
+              e.target.style.height = e.target.scrollHeight + "px";
+            }} onFocus={e => { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; }}
+              style={{ ...S.ta, overflow: "hidden" }} />
             <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
               <button onClick={() => { mut(ctx.id, () => ({ reentry: reentryDraft })); setEditReentry(false); }} style={S.primaryBtn}>Save</button>
               <button onClick={() => setEditReentry(false)} style={S.ghostBtn}>Cancel</button>
@@ -777,7 +788,28 @@ function Tracker() {
           const a = document.createElement("a");
           a.href = url; a.download = `project-tracker-backup-${today()}.json`;
           a.click(); URL.revokeObjectURL(url);
-        }} style={{ background: "none", border: "none", color: "#A8A29E", fontSize: 11, cursor: "pointer" }}>Export full backup (JSON)</button>
+        }} style={{ background: "none", border: "none", color: "#A8A29E", fontSize: 11, cursor: "pointer" }}>Export backup</button>
+        <span style={{ color: "#D6D3D1", margin: "0 8px" }}>&middot;</span>
+        <button onClick={() => {
+          const input = document.createElement("input");
+          input.type = "file"; input.accept = ".json";
+          input.onchange = (ev) => {
+            const file = ev.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const imported = JSON.parse(e.target.result);
+                if (!imported.contexts || !Array.isArray(imported.contexts)) { alert("Invalid backup file."); return; }
+                if (!confirm(`Import ${imported.contexts.length} projects? This will replace all current data.`)) return;
+                if (!imported.order) imported.order = imported.contexts.map(c => c.id);
+                setData(imported); saveData(imported);
+              } catch { alert("Could not parse backup file."); }
+            };
+            reader.readAsText(file);
+          };
+          input.click();
+        }} style={{ background: "none", border: "none", color: "#A8A29E", fontSize: 11, cursor: "pointer" }}>Import backup</button>
         <span style={{ color: "#D6D3D1", margin: "0 8px" }}>&middot;</span>
         <button onClick={() => {
           if (confirm("Reset everything to defaults?")) {

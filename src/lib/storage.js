@@ -4,10 +4,32 @@ const ROW_ID = 'default'
 
 let saveTimer = null
 let lastData = null
+let isSaving = false // guard to ignore our own realtime echoes
 
 // Sync status: "idle" | "saving" | "saved" | "offline"
 let syncStatus = "idle"
 let syncListeners = []
+
+// Realtime: listeners for remote data changes
+let realtimeListeners = []
+
+export function onRemoteUpdate(fn) {
+  realtimeListeners.push(fn)
+  return () => { realtimeListeners = realtimeListeners.filter(l => l !== fn) }
+}
+
+// Subscribe to realtime changes on tracker_state
+supabase
+  .channel('tracker-sync')
+  .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'tracker_state', filter: `id=eq.${ROW_ID}` }, (payload) => {
+    if (isSaving) return // ignore our own writes
+    const remoteData = payload.new?.data
+    if (remoteData) {
+      lastData = remoteData
+      realtimeListeners.forEach(fn => fn(remoteData))
+    }
+  })
+  .subscribe()
 
 export function onSyncStatus(fn) {
   syncListeners.push(fn)
@@ -51,6 +73,7 @@ export function saveData(data) {
   if (saveTimer) clearTimeout(saveTimer)
   saveTimer = setTimeout(async () => {
     const payload = lastData
+    isSaving = true
     try {
       const { error } = await supabase
         .from('tracker_state')
@@ -69,6 +92,8 @@ export function saveData(data) {
         console.error('Retry failed', e2)
         setSyncStatus("offline")
       }
+    } finally {
+      setTimeout(() => { isSaving = false }, 1000) // brief window to ignore our own echo
     }
   }, 500)
 }
