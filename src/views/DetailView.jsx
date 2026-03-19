@@ -20,6 +20,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
   const [showDone, setShowDone] = useState(false);
   const [exportText, setExportText] = useState(null);
   const [copiedReentry, setCopiedReentry] = useState(false);
+  const [reentryCollapsed, setReentryCollapsed] = useState(false);
   const taRef = useRef(null);
   const exportRef = useRef(null);
 
@@ -104,15 +105,18 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
 
       <section style={S.section}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <h3 style={S.h3}>Re-entry note</h3>
-          {!editReentry && <div style={{ display: "flex", gap: 10 }}>
+          <h3 style={{ ...S.h3, cursor: "pointer" }} onClick={() => !editReentry && setReentryCollapsed(!reentryCollapsed)}>
+            {!editReentry && <span style={{ marginRight: 4 }}>{reentryCollapsed ? "\u25B8" : "\u25BE"}</span>}
+            Re-entry note
+          </h3>
+          {!editReentry && !reentryCollapsed && <div style={{ display: "flex", gap: 10 }}>
             {ctx.reentry && <button onClick={() => {
               navigator.clipboard.writeText(ctx.reentry).then(() => { setCopiedReentry(true); setTimeout(() => setCopiedReentry(false), 1500); }, () => {});
             }} style={{ ...S.textBtn, color: copiedReentry ? "#059669" : S.textMuted, fontSize: 12 }}>{copiedReentry ? "Copied" : "Copy"}</button>}
-            <button onClick={() => { setEditReentry(true); setReentryDraft(ctx.reentry); setTimeout(() => taRef.current?.focus(), 30); }} style={S.textBtn}>Edit</button>
+            <button onClick={() => { setEditReentry(true); setReentryDraft(ctx.reentry); setReentryCollapsed(false); setTimeout(() => taRef.current?.focus(), 30); }} style={S.textBtn}>Edit</button>
           </div>}
         </div>
-        {editReentry ? (<>
+        {!reentryCollapsed && (editReentry ? (<>
           <textarea ref={taRef} value={reentryDraft} onChange={e => {
             setReentryDraft(e.target.value);
             e.target.style.height = "auto";
@@ -127,7 +131,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           <p style={{ fontSize: 14, color: S.textMid, lineHeight: 1.65, margin: 0, whiteSpace: "pre-wrap" }}>
             {ctx.reentry || <span style={{ color: "#D6D3D1", fontStyle: "italic" }}>Empty &mdash; click Edit</span>}
           </p>
-        )}
+        ))}
       </section>
 
       <section style={S.section}>
