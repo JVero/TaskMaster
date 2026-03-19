@@ -285,6 +285,8 @@ function Tracker() {
   const taRef = useRef(null);
   const exportRef = useRef(null);
 
+  useEffect(() => { document.body.style.background = S.bg; }, [S.bg]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -895,7 +897,7 @@ function makeStyles(dark) {
   const textMuted = dark ? "#78716C" : "#A8A29E";
   const inputBg = dark ? "#292524" : "#FFFFFF";
   return {
-    shell: { minHeight: "100vh", background: bg, fontFamily: SANS, padding: "20px 16px", transition: "opacity 0.12s ease, background 0.3s ease" },
+    shell: { minHeight: "100vh", background: bg, fontFamily: SANS, padding: "calc(20px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px))", transition: "opacity 0.12s ease, background 0.3s ease" },
     wrap: { maxWidth: 620, margin: "0 auto" },
     section: { background: card, borderRadius: 12, padding: "16px 18px", marginBottom: 14, border: `1px solid ${border}`, boxShadow: "0 1px 3px rgba(28, 25, 23, 0.06)" },
     h2: { margin: 0, fontSize: 20, fontWeight: 700, color: text, fontFamily: SERIF },
