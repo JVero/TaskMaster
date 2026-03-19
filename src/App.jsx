@@ -345,8 +345,28 @@ function Tracker() {
     setViewFade(0);
     setTimeout(() => { fn(); setViewFade(1); }, 120);
   }, []);
-  const openCtx = (id) => fadeTo(() => { setActiveId(id); setView("detail"); setEditReentry(false); setExpandLog(false); setShowAddTask(false); setEditingTaskId(null); setExportText(null); });
-  const goBack = () => fadeTo(() => { setView("list"); setActiveId(null); setExportText(null); });
+  const openCtx = (id, skipPush) => {
+    fadeTo(() => { setActiveId(id); setView("detail"); setEditReentry(false); setExpandLog(false); setShowAddTask(false); setEditingTaskId(null); setExportText(null); });
+    if (!skipPush) window.history.pushState({ view: "detail", id }, "", `#${id}`);
+  };
+  const goBack = (skipPush) => {
+    fadeTo(() => { setView("list"); setActiveId(null); setExportText(null); });
+    if (!skipPush) window.history.pushState({ view: "list" }, "", "#");
+  };
+
+  // Browser back/forward button support
+  useEffect(() => {
+    const handler = (e) => {
+      const state = e.state;
+      if (state?.view === "detail" && state.id) {
+        openCtx(state.id, true);
+      } else {
+        goBack(true);
+      }
+    };
+    window.addEventListener("popstate", handler);
+    return () => window.removeEventListener("popstate", handler);
+  }, []);
 
   // Drag handlers — live reorder on hover, persist on drop
   const handleDragStart = (id) => (e) => { setDragId(id); e.dataTransfer.effectAllowed = "move"; };
