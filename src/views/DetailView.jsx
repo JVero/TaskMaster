@@ -38,6 +38,13 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
     });
   };
 
+  const autoLog = (taskText, oldStatus, newStatus) => {
+    if (oldStatus === newStatus) return;
+    const labels = { "done": "Completed", "in-progress": "Started", "blocked": "Blocked", "todo": oldStatus === "in-progress" ? "Paused" : "Reopened" };
+    const label = labels[newStatus] || `${oldStatus} → ${newStatus}`;
+    mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: `${label}: ${taskText}`, dur: "auto" }, ...c.log] }));
+  };
+
   const dm = DOMAINS[ctx.domain] || { label: ctx.domain, color: "#78716C" };
   const sm = STATUS_META[ctx.status];
   const pm = PRIORITY_META[ctx.priority];
@@ -147,7 +154,9 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
                 <div key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", borderBottom: `1px solid ${S.border}`, opacity: isDoneGroup ? 0.4 : 1 }}>
                   <button onClick={() => {
                     const next = { todo: "in-progress", "in-progress": "done", done: "todo", blocked: "todo" };
-                    mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: next[t.status] } : t) }));
+                    const newStatus = next[task.status];
+                    mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t) }));
+                    autoLog(task.text, task.status, newStatus);
                   }} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, fontSize: 15, color: g.color, flexShrink: 0, marginTop: 1 }}
                     title={`${task.status} \u2014 click to advance`}>
                     {g.icon}
@@ -171,7 +180,11 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
                     <span onClick={() => { setEditingTaskId(task.id); setEditTaskBuf(task.text); }}
                       style={{ flex: 1, fontSize: 14, color: isDoneGroup ? S.textMuted : S.text, lineHeight: 1.5, cursor: "text", textDecoration: isDoneGroup ? "line-through" : "none", textDecorationColor: S.textMuted }}>{task.text}</span>
                   )}
-                  <select value={task.status} onChange={e => mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: e.target.value } : t) }))}
+                  <select value={task.status} onChange={e => {
+                    const newStatus = e.target.value;
+                    mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t) }));
+                    autoLog(task.text, task.status, newStatus);
+                  }}
                     style={{ fontSize: 11, color: "#A8A29E", background: "none", border: "1px solid #D6D3D1", borderRadius: 4, padding: "1px 2px", cursor: "pointer", flexShrink: 0 }}>
                     {TASK_STATUS.map(s => <option key={s}>{s}</option>)}
                   </select>
@@ -210,8 +223,8 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           <div style={{ marginTop: 12 }}>{ctx.log.map(e => (
             <div key={e.id} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: "1px solid #E7E5E4", alignItems: "baseline" }}>
               <span style={{ fontSize: 12, color: "#A8A29E", fontFamily: "ui-monospace, monospace", minWidth: 78, flexShrink: 0 }}>{e.date}</span>
-              <span style={{ fontSize: 13, color: "#57534E", flex: 1 }}>{e.text}</span>
-              <span style={{ fontSize: 11, color: "#D6D3D1", flexShrink: 0, textTransform: "uppercase" }}>{e.dur}</span>
+              <span style={{ fontSize: 13, color: e.dur === "auto" ? "#A8A29E" : "#57534E", flex: 1, fontStyle: e.dur === "auto" ? "italic" : "normal" }}>{e.text}</span>
+              {e.dur !== "auto" && <span style={{ fontSize: 11, color: "#D6D3D1", flexShrink: 0, textTransform: "uppercase" }}>{e.dur}</span>}
               <button onClick={() => mut(ctx.id, c => ({ log: c.log.filter(l => l.id !== e.id) }))}
                 style={{ background: "none", border: "none", color: "#D6D3D1", cursor: "pointer", fontSize: 13 }}>&times;</button>
             </div>

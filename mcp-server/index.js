@@ -212,6 +212,11 @@ server.tool(
       return { content: [{ type: "text", text: `No task found matching "${task}" in "${ctx.name}". Tasks: ${ctx.tasks.map((t) => t.text).join(", ")}` }] };
     }
     const old = t.status;
+    if (old !== status) {
+      const labels = { "done": "Completed", "in-progress": "Started", "blocked": "Blocked", "todo": old === "in-progress" ? "Paused" : "Reopened" };
+      const label = labels[status] || `${old} → ${status}`;
+      ctx.log.unshift({ id: uid(), date: today(), text: `${label}: ${t.text}`, dur: "auto" });
+    }
     t.status = status;
     await saveState(state);
     return { content: [{ type: "text", text: `Updated "${t.text}" in "${ctx.name}": ${old} → ${status}` }] };

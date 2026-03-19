@@ -89,8 +89,8 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
               <div key={entry.id} onClick={() => openCtx(entry.ctxId)}
                 style={{ padding: "10px 0 10px 14px", borderLeft: `2px solid ${entry.domain.color}`, marginBottom: 6, cursor: "pointer", marginLeft: 2 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 14, color: S.text, lineHeight: 1.5, flex: 1 }}>{entry.text}</span>
-                  <span style={{ fontSize: 11, color: S.textMuted, flexShrink: 0, textTransform: "uppercase" }}>{entry.dur}</span>
+                  <span style={{ fontSize: 14, color: entry.dur === "auto" ? S.textMuted : S.text, lineHeight: 1.5, flex: 1, fontStyle: entry.dur === "auto" ? "italic" : "normal" }}>{entry.text}</span>
+                  {entry.dur !== "auto" && <span style={{ fontSize: 11, color: S.textMuted, flexShrink: 0, textTransform: "uppercase" }}>{entry.dur}</span>}
                 </div>
                 <div style={{ fontSize: 12, color: entry.domain.color, fontWeight: 500, marginTop: 2 }}>{entry.ctxName}</div>
               </div>
