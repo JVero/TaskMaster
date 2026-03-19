@@ -80,21 +80,21 @@ function AuthGate({ children }) {
 }
 
 const DOMAINS = {
-  "systems-cpp": { label: "Systems / C++", color: "#6366f1" },
-  "data-science-python": { label: "Data Science", color: "#2563eb" },
-  "computer-vision": { label: "Comp Vision", color: "#7c3aed" },
-  "ios-swift": { label: "iOS / Swift", color: "#ea580c" },
-  "clinical-ops": { label: "Clinical", color: "#059669" },
-  "writing": { label: "Writing", color: "#b45309" },
-  "teaching": { label: "Teaching", color: "#0891b2" },
+  "systems-cpp": { label: "Systems", color: "#7C7FB8" },
+  "data-science-python": { label: "Data Science", color: "#6B8CAE" },
+  "computer-vision": { label: "Vision", color: "#8E74AD" },
+  "ios-swift": { label: "iOS", color: "#C17A52" },
+  "clinical-ops": { label: "Clinical", color: "#6A9E80" },
+  "writing": { label: "Writing", color: "#A68352" },
+  "teaching": { label: "Teaching", color: "#6A9DAA" },
 };
 
 const STATUS_META = {
-  active: { label: "Active", bg: "#dcfce7", fg: "#166534" },
-  blocked: { label: "Blocked", bg: "#fee2e2", fg: "#991b1b" },
-  paused: { label: "Paused", bg: "#fef3c7", fg: "#92400e" },
-  complete: { label: "Complete", bg: "#E7E5E4", fg: "#78716C" },
-  archived: { label: "Archived", bg: "#E7E5E4", fg: "#A8A29E" },
+  active: { label: "Active", bg: "#EDF5F0", fg: "#4A7C5C" },
+  blocked: { label: "Blocked", bg: "#FDF0EE", fg: "#B04A33" },
+  paused: { label: "Paused", bg: "#F5F3EE", fg: "#92400e" },
+  complete: { label: "Done", bg: "#F0EFED", fg: "#78716C" },
+  archived: { label: "Archived", bg: "#F0EFED", fg: "#A8A29E" },
 };
 
 const PRIORITY_META = {
@@ -115,12 +115,12 @@ function staleness(ctx) {
   if (!ctx.log.length) return { text: "No activity", days: Infinity, color: "#A8A29E" };
   const last = ctx.log.reduce((a, b) => a.date > b.date ? a : b);
   const days = Math.floor((Date.now() - new Date(last.date).getTime()) / 86400000);
-  if (days === 0) return { text: "Today", days, color: "#059669" };
-  if (days === 1) return { text: "Yesterday", days, color: "#059669" };
+  if (days === 0) return { text: "Today", days, color: "#6A9E80" };
+  if (days === 1) return { text: "Yesterday", days, color: "#6A9E80" };
   const text = `${days}d ago`;
   if (days <= 3) return { text, days, color: "#78716C" };
-  if (days <= 7) return { text, days, color: "#d97706" };
-  return { text, days, color: "#dc2626" };
+  if (days <= 7) return { text, days, color: "#A68352" };
+  return { text, days, color: "#B04A33" };
 }
 
 const SEED = {
@@ -474,8 +474,12 @@ function Tracker() {
     return (
       <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
         {syncPill}{undoToast}{undoToast}
-        <button onClick={goBack} style={S.back}>&larr; Projects</button>
-        <div style={{ marginBottom: 24 }}>
+        <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 0", padding: "calc(12px + env(safe-area-inset-top, 0px)) 20px 10px", borderBottom: `1px solid ${S.border}` }}>
+          <div style={{ maxWidth: 560, margin: "0 auto" }}>
+            <button onClick={goBack} style={{ ...S.back, margin: 0 }}>&larr; Projects</button>
+          </div>
+        </div>
+        <div style={{ marginBottom: 24, marginTop: 16 }}>
           <h2 style={S.h2}>{ctx.name}</h2>
           <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
             <select value={ctx.status} onChange={e => mut(ctx.id, () => ({ status: e.target.value }))}
@@ -652,16 +656,18 @@ function Tracker() {
           {loadError}
         </div>
       )}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>Projects</h1>
-            <button onClick={toggleDark} title={dark ? "Light mode" : "Dark mode"}
-              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: 0, color: S.textMuted }}>{dark ? "\u2600" : "\u263E"}</button>
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 16px", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 12px", borderBottom: `1px solid ${S.border}` }}>
+        <div style={{ maxWidth: 560, margin: "0 auto" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>Projects</h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+              <button onClick={toggleDark} title={dark ? "Light mode" : "Dark mode"}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 15, padding: 0, color: S.textMuted }}>{dark ? "\u2600" : "\u263E"}</button>
+              <button onClick={() => setShowNew(true)} style={{ ...S.textBtn, fontSize: 13 }}>+ New</button>
+            </div>
           </div>
-          <p style={{ margin: "2px 0 0", fontSize: 13, color: S.textMuted }}>{live.length} active &middot; {totalOpen} open tasks &middot; drag to reorder</p>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: S.textMuted }}>{live.length} active &middot; {totalOpen} open tasks</p>
         </div>
-        <button onClick={() => setShowNew(true)} style={S.primaryBtn}>+ New project</button>
       </div>
 
       {showNew && (
@@ -690,20 +696,20 @@ function Tracker() {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..."
-          style={{ ...S.input, fontSize: 13, padding: "6px 10px" }} />
-        <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)} style={{ ...S.sel, fontSize: 12 }}>
-          <option value="">All domains</option>
+      <div style={{ display: "flex", gap: 10, marginBottom: 20, alignItems: "center" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search..."
+          style={{ flex: 1, background: "transparent", border: "none", borderBottom: `1px solid ${S.border}`, padding: "6px 0", fontSize: 14, color: S.text, outline: "none", fontFamily: "inherit" }} />
+        <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)} style={{ fontSize: 12, background: "transparent", border: "none", color: S.textMuted, cursor: "pointer", fontFamily: "inherit" }}>
+          <option value="">All</option>
           {Object.entries(DOMAINS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
         </select>
         {(search || filterDomain) && <button onClick={() => { setSearch(""); setFilterDomain(""); }} style={{ ...S.textBtn, fontSize: 12, flexShrink: 0 }}>Clear</button>}
       </div>
 
       {crits.length > 0 && (
-        <div style={{ background: dark ? "#3b1111" : "#fef2f2", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: S.text, border: dark ? "1px solid #7f1d1d" : "1px solid #fecaca" }}>
-          <span style={{ fontWeight: 700, color: "#dc2626" }}>Critical path: </span>{crits.map(c => c.name).join(" \u2192 ")}
-        </div>
+        <p style={{ fontSize: 13, color: S.textMid, margin: "0 0 16px" }}>
+          <span style={{ color: S.accent, fontWeight: 600 }}>Critical path:</span> {crits.map(c => c.name).join(" \u2192 ")}
+        </p>
       )}
 
       {(() => {
@@ -717,10 +723,10 @@ function Tracker() {
         const dm = DOMAINS[pick.domain] || { label: pick.domain, color: "#78716C" };
         const nextTask = pick.tasks.find(t => t.status === "in-progress") || pick.tasks.find(t => t.status === "todo");
         return (
-          <div onClick={() => openCtx(pick.id)} style={{ background: dark ? "#3B2517" : "#FDF8F4", borderRadius: 10, padding: "12px 16px", marginBottom: 16, border: dark ? "1px solid #C15F3C33" : "1px solid #E8C4B0", cursor: "pointer" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#C15F3C", marginBottom: 4 }}>Suggested next</div>
-            <div style={{ fontSize: 14, fontWeight: 600, color: S.text }}>{pick.name} <span style={{ fontWeight: 400, color: S.textMuted }}>&middot; {pick.stale.text}</span></div>
-            {nextTask && <div style={{ fontSize: 13, color: "#57534E", marginTop: 4 }}>{nextTask.status === "in-progress" ? "\u25D1" : "\u25CB"} {nextTask.text}</div>}
+          <div onClick={() => openCtx(pick.id)} style={{ padding: "14px 0", marginBottom: 8, borderBottom: `1px solid ${S.border}`, cursor: "pointer" }}>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.08em", color: S.accent, marginBottom: 5 }}>Pick up where you left off</div>
+            <div style={{ fontSize: 16, fontWeight: 600, color: S.text, fontFamily: SERIF }}>{pick.name} <span style={{ fontWeight: 400, color: S.textMuted, fontSize: 13, fontFamily: SANS }}>&middot; {pick.stale.text}</span></div>
+            {nextTask && <div style={{ fontSize: 13, color: S.textMid, marginTop: 4 }}>{nextTask.status === "in-progress" ? "\u25D1" : "\u25CB"} {nextTask.text}</div>}
           </div>
         );
       })()}
@@ -733,6 +739,7 @@ function Tracker() {
         const isBlocked = c.status === "blocked";
         const isDragging = dragId === c.id;
         const isOver = dragOver === c.id && dragId !== c.id;
+        const stale = staleness(c);
 
         return (
           <div key={c.id}
@@ -743,67 +750,51 @@ function Tracker() {
             onDragEnd={handleDragEnd}
             onClick={() => { if (!dragId) openCtx(c.id); }}
             style={{
-              background: isOver ? (dark ? "#3B2517" : "#FDF8F4") : S.card,
-              borderRadius: 10, padding: "14px 16px", marginBottom: 8, cursor: "grab", boxShadow: "0 1px 3px rgba(28, 25, 23, 0.06)",
-              border: isOver ? "1px dashed #C15F3C" : isBlocked ? "1px solid #fca5a5" : `1px solid ${S.border}`,
-              borderLeft: `3px solid ${isBlocked ? "#dc2626" : dm.color}`,
-              opacity: isDragging ? 0.4 : 1,
-              transition: "background 0.15s, opacity 0.15s, border 0.15s",
+              padding: "16px 2px",
+              borderBottom: `1px solid ${S.border}`,
+              cursor: "grab",
+              opacity: isDragging ? 0.25 : 1,
+              background: isOver ? (dark ? "rgba(193,95,60,0.08)" : "rgba(193,95,60,0.04)") : "transparent",
+              transition: "opacity 0.15s, background 0.15s",
               userSelect: "none",
             }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
-                <span style={{ display: "flex", flexDirection: "column", gap: 0, flexShrink: 0 }}>
-                  <button onClick={e => { e.stopPropagation(); moveCtx(c.id, -1); }}
-                    style={{ background: "none", border: "none", color: "#D6D3D1", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}
-                    title="Move up">{"\u25B2"}</button>
-                  <button onClick={e => { e.stopPropagation(); moveCtx(c.id, 1); }}
-                    style={{ background: "none", border: "none", color: "#D6D3D1", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}
-                    title="Move down">{"\u25BC"}</button>
-                </span>
-                <span style={{ fontSize: 15, fontWeight: 600, color: S.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: SERIF }}>{c.name}</span>
-                <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: sm.bg, color: sm.fg, flexShrink: 0 }}>{sm.label}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flex: 1 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: sm.fg, flexShrink: 0, position: "relative", top: -1, display: "inline-block" }} />
+                <span style={{ fontSize: 16, fontWeight: 600, color: isBlocked ? "#B04A33" : S.text, fontFamily: SERIF, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
               </div>
-              <span style={{ color: "#D6D3D1", flexShrink: 0 }}>&rarr;</span>
+              <span style={{ fontSize: 12, color: stale.color, fontWeight: stale.days >= 7 ? 600 : 400, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{stale.text}</span>
             </div>
-            <p style={{ fontSize: 13, color: S.textMid, margin: "6px 0 0", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-              {c.reentry || "No re-entry note"}
-            </p>
-            <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center" }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: dm.color }}>{dm.label}</span>
-              {c.priority === "critical-path" && <span style={{ fontSize: 11, fontWeight: 600, color: "#dc2626" }}>Critical</span>}
-              {(() => { const s = staleness(c); return (
-                <span style={{ fontSize: 11, color: s.color, fontWeight: s.days >= 7 ? 600 : 400, marginLeft: 4 }}>{s.text}</span>
-              ); })()}
-              {total > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
-                  <div style={{ width: 48, height: 4, background: "#E7E5E4", borderRadius: 2, overflow: "hidden" }}>
-                    <div style={{ width: `${(done / total) * 100}%`, height: "100%", background: dm.color, borderRadius: 2 }} />
-                  </div>
-                  <span style={{ fontSize: 11, color: "#A8A29E" }}>{done}/{total}</span>
-                </div>
-              )}
+            {c.reentry && (
+              <p style={{ fontSize: 13, color: S.textMid, margin: "5px 0 0 15px", lineHeight: 1.55, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                {c.reentry}
+              </p>
+            )}
+            <div style={{ display: "flex", gap: 8, marginTop: 7, marginLeft: 15, alignItems: "center", fontSize: 12, color: S.textMuted }}>
+              <span style={{ color: dm.color, fontWeight: 500 }}>{dm.label}</span>
+              {c.priority === "critical-path" && <span style={{ color: S.accent, fontWeight: 500 }}>Critical</span>}
+              {total > 0 && <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{done}/{total}</span>}
             </div>
           </div>
         );
       })}
 
       {dormant.length > 0 && (
-        <div style={{ marginTop: 20 }}>
-          <button onClick={() => setShowDormant(!showDormant)} style={{ ...S.textBtn, fontSize: 13, color: "#A8A29E" }}>
-            {showDormant ? "\u25BE" : "\u25B8"} Paused &amp; archived ({dormant.length})
+        <div style={{ marginTop: 24 }}>
+          <button onClick={() => setShowDormant(!showDormant)} style={{ ...S.textBtn, fontSize: 12, color: S.textMuted }}>
+            {showDormant ? "\u25BE" : "\u25B8"} Paused & archived ({dormant.length})
           </button>
           {showDormant && dormant.map(c => (
             <div key={c.id} onClick={() => openCtx(c.id)}
-              style={{ padding: "10px 14px", marginTop: 4, cursor: "pointer", borderRadius: 6, background: S.card, borderLeft: `3px solid ${(DOMAINS[c.domain] || {}).color || "#A8A29E"}` }}>
-              <span style={{ fontSize: 14, color: "#78716C" }}>{c.name}</span>
-              <span style={{ fontSize: 11, color: "#D6D3D1", marginLeft: 8 }}>{c.status}</span>
+              style={{ padding: "10px 2px", cursor: "pointer", borderBottom: `1px solid ${S.border}` }}>
+              <span style={{ fontSize: 14, color: S.textMuted }}>{c.name}</span>
+              <span style={{ fontSize: 11, color: S.textMuted, marginLeft: 8, opacity: 0.6 }}>{STATUS_META[c.status]?.label || c.status}</span>
             </div>
           ))}
         </div>
       )}
 
-      <div style={{ marginTop: 36, textAlign: "center" }}>
+      <div style={{ marginTop: 40, paddingTop: 20, borderTop: `1px solid ${S.border}`, textAlign: "center" }}>
         <button onClick={() => {
           const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
           const url = URL.createObjectURL(blob);
@@ -890,27 +881,26 @@ function makeStyles(dark) {
   const accent = dark ? ACCENT.dark : ACCENT.light;
   const bg = dark ? "#1C1917" : "#FAF9F6";
   const card = dark ? "#292524" : "#FFFFFF";
-  const border = dark ? "#44403C" : "#E7E5E4";
+  const border = dark ? "#3D3936" : "#E8E4E0";
   const borderMed = dark ? "#57534E" : "#D6D3D1";
   const text = dark ? "#E7E5E4" : "#1C1917";
   const textMid = dark ? "#A8A29E" : "#57534E";
   const textMuted = dark ? "#78716C" : "#A8A29E";
   const inputBg = dark ? "#292524" : "#FFFFFF";
   return {
-    shell: { minHeight: "100vh", background: bg, fontFamily: SANS, padding: "calc(20px + env(safe-area-inset-top, 0px)) calc(16px + env(safe-area-inset-right, 0px)) calc(20px + env(safe-area-inset-bottom, 0px)) calc(16px + env(safe-area-inset-left, 0px))", transition: "opacity 0.12s ease, background 0.3s ease" },
-    wrap: { maxWidth: 620, margin: "0 auto" },
-    section: { background: card, borderRadius: 12, padding: "16px 18px", marginBottom: 14, border: `1px solid ${border}`, boxShadow: "0 1px 3px rgba(28, 25, 23, 0.06)" },
-    h2: { margin: 0, fontSize: 20, fontWeight: 700, color: text, fontFamily: SERIF },
-    h3: { margin: 0, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: textMuted },
-    dtag: { fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, border: "1px solid" },
-    sel: { fontSize: 12, fontWeight: 600, padding: "4px 8px", borderRadius: 6, background: dark ? "#44403C" : "#FAF9F6", border: `1px solid ${borderMed}`, color: textMid, cursor: "pointer" },
-    input: { background: inputBg, border: `1px solid ${borderMed}`, borderRadius: 8, color: text, fontSize: 14, padding: "8px 10px", fontFamily: "inherit", outline: "none", flex: 1 },
-    ta: { width: "100%", minHeight: 80, background: inputBg, border: `1px solid ${borderMed}`, borderRadius: 8, color: text, fontSize: 14, padding: 10, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box", outline: "none" },
-    primaryBtn: { background: accent, color: "#fff", border: "none", fontWeight: 600, fontSize: 13, padding: "7px 16px", borderRadius: 8, cursor: "pointer" },
-    ghostBtn: { background: "none", border: `1px solid ${borderMed}`, color: textMid, fontSize: 13, padding: "6px 14px", borderRadius: 8, cursor: "pointer" },
+    shell: { minHeight: "100vh", background: bg, fontFamily: SANS, padding: "calc(24px + env(safe-area-inset-top, 0px)) calc(20px + env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) calc(20px + env(safe-area-inset-left, 0px))", transition: "opacity 0.12s ease, background 0.3s ease" },
+    wrap: { maxWidth: 560, margin: "0 auto" },
+    section: { background: card, borderRadius: 8, padding: "16px 18px", marginBottom: 14, border: `1px solid ${border}` },
+    h2: { margin: 0, fontSize: 22, fontWeight: 700, color: text, fontFamily: SERIF, letterSpacing: "-0.01em" },
+    h3: { margin: 0, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: textMuted },
+    dtag: { fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 4, border: "1px solid" },
+    sel: { fontSize: 12, fontWeight: 500, padding: "4px 8px", borderRadius: 6, background: dark ? "#44403C" : "#FAF9F6", border: `1px solid ${borderMed}`, color: textMid, cursor: "pointer" },
+    input: { background: inputBg, border: `1px solid ${borderMed}`, borderRadius: 6, color: text, fontSize: 14, padding: "8px 10px", fontFamily: "inherit", outline: "none", flex: 1 },
+    ta: { width: "100%", minHeight: 80, background: inputBg, border: `1px solid ${borderMed}`, borderRadius: 6, color: text, fontSize: 14, padding: 10, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box", outline: "none" },
+    primaryBtn: { background: accent, color: "#fff", border: "none", fontWeight: 600, fontSize: 13, padding: "7px 16px", borderRadius: 6, cursor: "pointer" },
+    ghostBtn: { background: "none", border: `1px solid ${borderMed}`, color: textMid, fontSize: 13, padding: "6px 14px", borderRadius: 6, cursor: "pointer" },
     textBtn: { background: "none", border: "none", color: accent, fontSize: 13, fontWeight: 500, cursor: "pointer", padding: 0 },
     back: { background: "none", border: "none", color: textMid, cursor: "pointer", fontSize: 14, padding: "4px 0", marginBottom: 16 },
-    // theme tokens for inline use
     accent, text, textMid, textMuted, card, border, borderMed, bg,
   };
 }

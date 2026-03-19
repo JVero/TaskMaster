@@ -259,6 +259,28 @@ server.tool(
   }
 );
 
+// WRITE: create project
+server.tool(
+  "create_project",
+  "Create a new project.",
+  {
+    name: z.string().describe("Project name"),
+    domain: z.enum(Object.keys(DOMAINS)).describe("Project domain"),
+    priority: z.enum(PRIORITY_OPTIONS).default("steady").describe("Priority level"),
+    reentry: z.string().default("").describe("Initial re-entry note"),
+  },
+  async ({ name, domain, priority, reentry }) => {
+    const state = await loadState();
+    const id = "ctx-" + uid();
+    const newCtx = { id, name, domain, status: "active", priority, reentry, stakeholders: "", tasks: [], log: [] };
+    state.contexts.push(newCtx);
+    if (!state.order) state.order = state.contexts.map((c) => c.id);
+    else state.order.push(id);
+    await saveState(state);
+    return { content: [{ type: "text", text: `Created project "${name}" [${DOMAINS[domain]}, ${priority}]` }] };
+  }
+);
+
 // --- start ---
 
 const transport = new StdioServerTransport();
