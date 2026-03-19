@@ -111,7 +111,7 @@ export default function ListView({
         );
       })()}
 
-      {live.map(c => {
+      {live.map((c, idx) => {
         const dm = DOMAINS[c.domain] || { label: c.domain, color: "#78716C" };
         const sm = STATUS_META[c.status];
         const total = c.tasks.length;
@@ -120,6 +120,7 @@ export default function ListView({
         const isDragging = dragId === c.id;
         const isOver = dragOver === c.id && dragId !== c.id;
         const stale = staleness(c);
+        const reorderBtn = { background: "none", border: "none", padding: "4px 3px", fontSize: 9, lineHeight: 1, cursor: "pointer", color: S.textMuted };
 
         return (
           <div key={c.id}
@@ -154,6 +155,12 @@ export default function ListView({
               <span style={{ color: dm.color, fontWeight: 500 }}>{dm.label}</span>
               {c.priority === "critical-path" && <span style={{ color: S.accent, fontWeight: 500 }}>Critical</span>}
               {total > 0 && <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{done}/{total}</span>}
+              <span onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", flexShrink: 0, marginLeft: total > 0 ? 4 : "auto" }}>
+                <button onClick={() => moveCtx(c.id, -1)} disabled={idx === 0}
+                  style={{ ...reorderBtn, color: idx === 0 ? S.border : S.textMuted }}>{"\u25B2"}</button>
+                <button onClick={() => moveCtx(c.id, 1)} disabled={idx === live.length - 1}
+                  style={{ ...reorderBtn, color: idx === live.length - 1 ? S.border : S.textMuted }}>{"\u25BC"}</button>
+              </span>
             </div>
           </div>
         );
