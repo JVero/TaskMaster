@@ -1,5 +1,83 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { loadData, saveData, onSyncStatus } from "./lib/storage";
+import { supabase } from "./lib/supabase";
+
+// --- Supabase Auth gate ---
+function AuthGate({ children }) {
+  const [session, setSession] = useState(undefined); // undefined = loading, null = no session
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (session === undefined) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "-apple-system, system-ui, 'Segoe UI', sans-serif", background: "#f8fafc" }}>
+        <div style={{ color: "#94a3b8", fontSize: 14 }}>Loading...</div>
+      </div>
+    );
+  }
+
+  if (session) return children;
+
+  const signIn = async () => {
+    if (!email.trim() || !password) return;
+    setLoading(true);
+    setError("");
+    const { error: err } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    if (err) setError(err.message);
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "-apple-system, system-ui, 'Segoe UI', sans-serif", background: "#f8fafc", padding: 20 }}>
+      <div style={{ textAlign: "center", maxWidth: 320, width: "100%" }}>
+        <div style={{ fontSize: 28, marginBottom: 16 }}>{"\uD83D\uDD12"}</div>
+        <h2 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 700, color: "#0f172a" }}>Project Tracker</h2>
+        <p style={{ margin: "0 0 20px", fontSize: 13, color: "#94a3b8" }}>Sign in to continue</p>
+        <input
+          autoFocus type="email" value={email}
+          onChange={e => { setEmail(e.target.value); setError(""); }}
+          onKeyDown={e => { if (e.key === "Enter") document.getElementById("pw")?.focus(); }}
+          placeholder="Email"
+          style={{
+            width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 15,
+            border: `1px solid ${error ? "#fca5a5" : "#e2e8f0"}`, borderRadius: 8,
+            outline: "none", fontFamily: "inherit", marginBottom: 10,
+            background: error ? "#fef2f2" : "#fff",
+          }}
+        />
+        <input
+          id="pw" type="password" value={password}
+          onChange={e => { setPassword(e.target.value); setError(""); }}
+          onKeyDown={e => { if (e.key === "Enter") signIn(); }}
+          placeholder="Password"
+          style={{
+            width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 15,
+            border: `1px solid ${error ? "#fca5a5" : "#e2e8f0"}`, borderRadius: 8,
+            outline: "none", fontFamily: "inherit", marginBottom: 10,
+            background: error ? "#fef2f2" : "#fff",
+          }}
+        />
+        <button onClick={signIn} disabled={loading}
+          style={{
+            width: "100%", padding: "10px 0", fontSize: 14, fontWeight: 600,
+            background: "#0f172a", color: "#fff", border: "none", borderRadius: 8,
+            cursor: loading ? "wait" : "pointer", opacity: loading ? 0.7 : 1,
+          }}>
+          {loading ? "Signing in..." : "Sign in"}
+        </button>
+        {error && <p style={{ marginTop: 10, fontSize: 13, color: "#dc2626" }}>{error}</p>}
+      </div>
+    </div>
+  );
+}
 
 const DOMAINS = {
   "systems-cpp": { label: "Systems / C++", color: "#6366f1" },
@@ -171,7 +249,7 @@ function exportForClaude(ctx) {
   return lines.join('\n');
 }
 
-export default function App() {
+function Tracker() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -687,12 +765,22 @@ export default function App() {
 
       <div style={{ marginTop: 36, textAlign: "center" }}>
         <button onClick={() => {
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url; a.download = `project-tracker-backup-${today()}.json`;
+          a.click(); URL.revokeObjectURL(url);
+        }} style={{ background: "none", border: "none", color: "#94a3b8", fontSize: 11, cursor: "pointer" }}>Export full backup (JSON)</button>
+        <span style={{ color: "#e2e8f0", margin: "0 8px" }}>&middot;</span>
+        <button onClick={() => {
           if (confirm("Reset everything to defaults?")) {
             setData(SEED); setActiveId(null); setView("list");
             saveData(SEED);
           }
         }} style={{ background: "none", border: "none", color: "#e2e8f0", fontSize: 11, cursor: "pointer" }}>Reset to defaults</button>
         <p style={{ fontSize: 11, color: "#e2e8f0", margin: "8px 0 0" }}>Press <kbd style={{ background: "#f1f5f9", padding: "1px 5px", borderRadius: 3, fontSize: 11, border: "1px solid #e2e8f0" }}>L</kbd> to quick-log</p>
+        <button onClick={() => supabase.auth.signOut()}
+          style={{ background: "none", border: "none", color: "#e2e8f0", fontSize: 11, cursor: "pointer", marginTop: 8 }}>Sign out</button>
       </div>
 
       {quickLog && (
@@ -759,4 +847,8 @@ function makeStyles(dark) {
     // theme tokens for inline use
     text, textMid, textMuted, card, border, borderMed, bg,
   };
+}
+
+export default function App() {
+  return <AuthGate><Tracker /></AuthGate>;
 }
