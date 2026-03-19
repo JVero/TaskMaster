@@ -119,6 +119,8 @@ return <ListView ... />;
 | `S` | object | Style object |
 | `maxW` | number | Responsive max-width |
 | `viewFade` | number | Opacity for transitions |
+| `syncState` | string | Sync pill state |
+| `undoAction` | object/null | Undo toast state |
 
 Note: DetailView manages its own local UI state (editReentry, reentryDraft, newTask, showAddTask, editingTaskId, editTaskBuf, logText, logDur, expandLog, showDone, exportText) and its own refs (taRef for reentry textarea, exportRef for export textarea). It also defines `moveTask` locally (only needs `mut`). The `taskGroups` rendering constant is local to DetailView.
 
@@ -134,6 +136,8 @@ Because this state is view-local, navigating away unmounts DetailView and natura
 | `S` | object | Style object |
 | `maxW` | number | Responsive max-width |
 | `viewFade` | number | Opacity for transitions |
+| `syncState` | string | Sync pill state |
+| `undoAction` | object/null | Undo toast state |
 
 ### Shared Components
 
