@@ -19,6 +19,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
   const [editTaskBuf, setEditTaskBuf] = useState("");
   const [showDone, setShowDone] = useState(false);
   const [exportText, setExportText] = useState(null);
+  const [copiedReentry, setCopiedReentry] = useState(false);
   const taRef = useRef(null);
   const exportRef = useRef(null);
 
@@ -104,7 +105,12 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
       <section style={S.section}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={S.h3}>Re-entry note</h3>
-          {!editReentry && <button onClick={() => { setEditReentry(true); setReentryDraft(ctx.reentry); setTimeout(() => taRef.current?.focus(), 30); }} style={S.textBtn}>Edit</button>}
+          {!editReentry && <div style={{ display: "flex", gap: 10 }}>
+            {ctx.reentry && <button onClick={() => {
+              navigator.clipboard.writeText(ctx.reentry).then(() => { setCopiedReentry(true); setTimeout(() => setCopiedReentry(false), 1500); }, () => {});
+            }} style={{ ...S.textBtn, color: copiedReentry ? "#059669" : S.textMuted, fontSize: 12 }}>{copiedReentry ? "Copied" : "Copy"}</button>}
+            <button onClick={() => { setEditReentry(true); setReentryDraft(ctx.reentry); setTimeout(() => taRef.current?.focus(), 30); }} style={S.textBtn}>Edit</button>
+          </div>}
         </div>
         {editReentry ? (<>
           <textarea ref={taRef} value={reentryDraft} onChange={e => {
