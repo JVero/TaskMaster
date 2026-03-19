@@ -404,6 +404,24 @@ function Tracker() {
     setDragId(null); setDragOver(null);
   };
 
+  const moveTask = (ctxId, taskId, dir) => {
+    mut(ctxId, c => {
+      const tasks = [...c.tasks];
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return {};
+      // Get indices of tasks with the same status (in array order)
+      const sameStatus = tasks.map((t, i) => ({ t, i })).filter(({ t }) => t.status === task.status);
+      const posInGroup = sameStatus.findIndex(({ t }) => t.id === taskId);
+      const targetInGroup = posInGroup + dir;
+      if (targetInGroup < 0 || targetInGroup >= sameStatus.length) return {};
+      // Swap in the full array
+      const fromIdx = sameStatus[posInGroup].i;
+      const toIdx = sameStatus[targetInGroup].i;
+      [tasks[fromIdx], tasks[toIdx]] = [tasks[toIdx], tasks[fromIdx]];
+      return { tasks };
+    });
+  };
+
   const moveCtx = (id, dir) => {
     setData(prev => {
       const order = [...(prev.order || prev.contexts.map(c => c.id))];
@@ -572,7 +590,7 @@ function Tracker() {
                   {isDoneGroup && <span style={{ marginRight: 4 }}>{showDone ? "\u25BE" : "\u25B8"}</span>}
                   {g.label} &middot; {items.length}
                 </div>
-                {(!isDoneGroup || showDone) && items.map(task => (
+                {(!isDoneGroup || showDone) && items.map((task, idx) => (
                   <div key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", borderBottom: `1px solid ${S.border}`, opacity: isDoneGroup ? 0.4 : 1 }}>
                     <button onClick={() => {
                       const next = { todo: "in-progress", "in-progress": "done", done: "todo", blocked: "todo" };
@@ -581,6 +599,16 @@ function Tracker() {
                       title={`${task.status} \u2014 click to advance`}>
                       {g.icon}
                     </button>
+                    {!isDoneGroup && items.length > 1 && (
+                      <span style={{ display: "flex", flexDirection: "column", flexShrink: 0, marginTop: -4 }}>
+                        <button onClick={() => moveTask(ctx.id, task.id, -1)}
+                          style={{ background: "none", border: "none", color: idx === 0 ? S.border : S.textMuted, cursor: idx === 0 ? "default" : "pointer", padding: "6px 4px 2px", fontSize: 10, lineHeight: 1 }}
+                          title="Move up">{"\u25B2"}</button>
+                        <button onClick={() => moveTask(ctx.id, task.id, 1)}
+                          style={{ background: "none", border: "none", color: idx === items.length - 1 ? S.border : S.textMuted, cursor: idx === items.length - 1 ? "default" : "pointer", padding: "2px 4px 6px", fontSize: 10, lineHeight: 1 }}
+                          title="Move down">{"\u25BC"}</button>
+                      </span>
+                    )}
                     {editingTaskId === task.id ? (
                       <input autoFocus value={editTaskBuf} onChange={e => setEditTaskBuf(e.target.value)}
                         onKeyDown={e => { if (e.key === "Enter") { mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, text: editTaskBuf } : t) })); setEditingTaskId(null); } if (e.key === "Escape") setEditingTaskId(null); }}

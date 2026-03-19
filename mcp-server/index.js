@@ -173,7 +173,7 @@ server.tool(
 // WRITE: add task
 server.tool(
   "add_task",
-  "Add a new task to a project.",
+  "Add ONE task to a project. Each task should be a single, specific action item. If you have multiple tasks, call this tool once per task — do NOT combine them into one.",
   {
     project: z.string().describe("Project name or ID"),
     text: z.string().describe("Task description"),
