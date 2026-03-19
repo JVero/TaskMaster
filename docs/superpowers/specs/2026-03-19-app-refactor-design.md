@@ -43,11 +43,13 @@ src/
 - `winWidth` — responsive layout
 - `dark` — theme (persisted to localStorage)
 - `search`, `filterDomain` — list filtering
-- UI toggles: `showNew`, `showDormant`, `editReentry`, `showAddTask`, `expandLog`, `showDone`, `editingTaskId`, `quickLog`, `exportText`
+- UI toggles: `showNew`, `showDormant`, `quickLog`
 - `dragId`, `dragOver` — drag reorder state
 - `undoAction` — undo toast state
 - `syncState` — sync pill state
-- Form buffers: `reentryDraft`, `newTask`, `editTaskBuf`, `logText`, `logDur`, `newName`, `newDomain`
+- Form buffers: `newName`, `newDomain`
+
+Note: Detail-view-only state moves into DetailView (see State Simplification below).
 
 ### Mutation helpers (stay in Tracker)
 
@@ -84,6 +86,7 @@ return <ListView ... />;
 | `dormant` | array | Paused/archived/complete projects |
 | `liveAll` | array | All non-dormant (for critical path) |
 | `data` | object | Full data (backup export/import/reset) |
+| `loadError` | string/null | Offline warning banner text |
 | `search`, `setSearch` | string, fn | Search state |
 | `filterDomain`, `setFilterDomain` | string, fn | Domain filter state |
 | `showNew`, `setShowNew` | bool, fn | New project form toggle |
@@ -101,6 +104,7 @@ return <ListView ... />;
 | `moveCtx` | fn | Reorder projects |
 | `quickLog`, `setQuickLog` | object, fn | Quick log modal state |
 | `mut` | fn | Project mutation |
+| `signOut` | fn | Sign out callback |
 | `S` | object | Style object |
 | `maxW` | number | Responsive max-width |
 
@@ -116,7 +120,9 @@ return <ListView ... />;
 | `maxW` | number | Responsive max-width |
 | `viewFade` | number | Opacity for transitions |
 
-Note: DetailView manages its own local UI state (editReentry, reentryDraft, newTask, showAddTask, editingTaskId, editTaskBuf, logText, logDur, expandLog, showDone, exportText). These are view-local and don't need to live in Tracker.
+Note: DetailView manages its own local UI state (editReentry, reentryDraft, newTask, showAddTask, editingTaskId, editTaskBuf, logText, logDur, expandLog, showDone, exportText) and its own refs (taRef for reentry textarea, exportRef for export textarea). It also defines `moveTask` locally (only needs `mut`). The `taskGroups` rendering constant is local to DetailView.
+
+Because this state is view-local, navigating away unmounts DetailView and naturally resets it — the explicit state resets currently in `openCtx` become unnecessary and should be removed during refactoring.
 
 ### TimelineView
 
@@ -139,10 +145,10 @@ Note: DetailView manages its own local UI state (editReentry, reentryDraft, newT
 
 ## State Simplification
 
-Moving DetailView's UI state out of Tracker is a net improvement — Tracker currently holds ~30 useState hooks, many of which are only relevant to the detail view. After refactor:
+Moving DetailView's UI state out of Tracker is a net improvement — Tracker currently holds 31 useState hooks, many of which are only relevant to the detail view. After refactor:
 
-- **Tracker:** ~18 hooks (data, routing, shared UI like quickLog/undo/sync)
-- **DetailView:** ~10 hooks (editReentry, reentryDraft, newTask, showAddTask, editingTaskId, editTaskBuf, logText, logDur, expandLog, showDone, exportText)
+- **Tracker:** ~20 hooks (data, routing, shared UI like quickLog/undo/sync)
+- **DetailView:** 11 hooks (editReentry, reentryDraft, newTask, showAddTask, editingTaskId, editTaskBuf, logText, logDur, expandLog, showDone, exportText) + 2 refs (taRef, exportRef)
 
 This means navigating away from detail and back naturally resets that local state — which is the correct behavior (you don't want stale edit buffers when re-entering a project).
 
@@ -150,7 +156,7 @@ This means navigating away from detail and back naturally resets that local stat
 
 ### constants.js
 
-Exports: `DOMAINS`, `STATUS_META`, `PRIORITY_META`, `STATUS_OPTIONS`, `PRIORITY_OPTIONS`, `TASK_STATUS`, `SEED`
+Exports: `DOMAINS`, `STATUS_META`, `PRIORITY_META`, `STATUS_OPTIONS`, `PRIORITY_OPTIONS`, `TASK_STATUS`, `SEED`, `DAY_NAMES`, `MONTH_NAMES`
 
 ### styles.js
 
@@ -172,13 +178,23 @@ Note: `staleness()` and `exportForClaude()` depend on `DOMAINS` — they import 
 - Inline styling approach — kept as-is
 - All existing functionality — pure refactor, no behavior changes
 
+## Bugfix During Refactor
+
+- The detail view currently renders `{undoToast}` twice (duplicate). Fix by rendering UndoToast once per view.
+
+## Implementation Notes
+
+- `openCtx` currently resets detail-view state (editReentry, expandLog, etc.). After refactor, DetailView unmounts/remounts on navigation, so these resets are unnecessary — remove them from `openCtx`.
+- The `document.body.style.background` side effect must stay in Tracker (not in a view), so it fires regardless of which view is mounted.
+- ListView needs a `signOut` callback prop rather than importing `supabase` directly — keeps the auth boundary in App.jsx.
+
 ## Expected File Sizes (approximate)
 
 | File | Lines |
 |------|-------|
 | `App.jsx` (Tracker + AuthGate) | ~200 |
 | `ListView.jsx` | ~250 |
-| `DetailView.jsx` | ~250 |
+| `DetailView.jsx` | ~300 |
 | `TimelineView.jsx` | ~100 |
 | `QuickLogModal.jsx` | ~50 |
 | `UndoToast.jsx` | ~20 |
@@ -187,4 +203,4 @@ Note: `staleness()` and `exportForClaude()` depend on `DOMAINS` — they import 
 | `styles.js` | ~40 |
 | `helpers.js` | ~40 |
 
-Total: ~1070 lines across 10 files vs ~1050 in one file. Slight overhead from imports/exports, but each file is independently comprehensible.
+Total: ~1120 lines across 10 files vs ~1080 in one file. Slight overhead from imports/exports, but each file is independently comprehensible.
