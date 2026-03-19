@@ -156,9 +156,9 @@ export default function ListView({
               {c.priority === "critical-path" && <span style={{ color: S.accent, fontWeight: 500 }}>Critical</span>}
               {total > 0 && <span style={{ marginLeft: "auto", fontVariantNumeric: "tabular-nums" }}>{done}/{total}</span>}
               <span onClick={e => e.stopPropagation()} style={{ display: "flex", flexDirection: "column", flexShrink: 0, marginLeft: total > 0 ? 4 : "auto" }}>
-                <button onClick={() => moveCtx(c.id, -1)} disabled={idx === 0}
+                <button onClick={(e) => { e.stopPropagation(); moveCtx(c.id, -1); }} disabled={idx === 0}
                   style={{ ...reorderBtn, color: idx === 0 ? S.border : S.textMuted }}>{"\u25B2"}</button>
-                <button onClick={() => moveCtx(c.id, 1)} disabled={idx === live.length - 1}
+                <button onClick={(e) => { e.stopPropagation(); moveCtx(c.id, 1); }} disabled={idx === live.length - 1}
                   style={{ ...reorderBtn, color: idx === live.length - 1 ? S.border : S.textMuted }}>{"\u25BC"}</button>
               </span>
             </div>
