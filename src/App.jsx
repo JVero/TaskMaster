@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { loadData, saveData } from "./lib/storage";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { loadData, saveData, onSyncStatus } from "./lib/storage";
 
 const DOMAINS = {
   "systems-cpp": { label: "Systems / C++", color: "#6366f1" },
@@ -32,6 +32,18 @@ const TASK_STATUS = ["todo", "in-progress", "done", "blocked"];
 
 const uid = () => Math.random().toString(36).slice(2, 10);
 const today = () => new Date().toISOString().slice(0, 10);
+
+function staleness(ctx) {
+  if (!ctx.log.length) return { text: "No activity", days: Infinity, color: "#94a3b8" };
+  const last = ctx.log.reduce((a, b) => a.date > b.date ? a : b);
+  const days = Math.floor((Date.now() - new Date(last.date).getTime()) / 86400000);
+  if (days === 0) return { text: "Today", days, color: "#059669" };
+  if (days === 1) return { text: "Yesterday", days, color: "#059669" };
+  const text = `${days}d ago`;
+  if (days <= 3) return { text, days, color: "#64748b" };
+  if (days <= 7) return { text, days, color: "#d97706" };
+  return { text, days, color: "#dc2626" };
+}
 
 const SEED = {
   order: ["ctx-5", "ctx-1", "ctx-2", "ctx-3", "ctx-4", "ctx-6", "ctx-7", "ctx-8"],
@@ -181,6 +193,17 @@ export default function App() {
   const [dragId, setDragId] = useState(null);
   const [dragOver, setDragOver] = useState(null);
   const [exportText, setExportText] = useState(null);
+  const [viewFade, setViewFade] = useState(1);
+  const [quickLog, setQuickLog] = useState(null); // { ctxId, text, dur }
+  const [syncState, setSyncState] = useState("idle");
+  const [undoAction, setUndoAction] = useState(null); // { label, undo, timer }
+  const [showDone, setShowDone] = useState(false);
+  const [search, setSearch] = useState("");
+  const [filterDomain, setFilterDomain] = useState("");
+  const [dark, setDark] = useState(() => {
+    try { return localStorage.getItem("tracker-dark") === "1"; } catch { return false; }
+  });
+  const S = useMemo(() => makeStyles(dark), [dark]);
   const taRef = useRef(null);
   const exportRef = useRef(null);
 
@@ -199,6 +222,26 @@ export default function App() {
     })();
   }, []);
 
+  useEffect(() => onSyncStatus(setSyncState), []);
+  const toggleDark = () => setDark(d => { const v = !d; try { localStorage.setItem("tracker-dark", v ? "1" : "0"); } catch {} return v; });
+
+  // Quick-log keyboard shortcut
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "l" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const tag = document.activeElement?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (view === "list") {
+          e.preventDefault();
+          setQuickLog({ ctxId: "", text: "", dur: "session" });
+        }
+      }
+      if (e.key === "Escape" && quickLog) setQuickLog(null);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [view, quickLog]);
+
   const persist = useCallback((d) => { saveData(d); }, []);
   const mut = useCallback((ctxId, fn) => {
     setData(prev => {
@@ -207,8 +250,19 @@ export default function App() {
     });
   }, [persist]);
   const saveAll = useCallback((d) => { setData(d); persist(d); }, [persist]);
-  const openCtx = (id) => { setActiveId(id); setView("detail"); setEditReentry(false); setExpandLog(false); setShowAddTask(false); setEditingTaskId(null); setExportText(null); };
-  const goBack = () => { setView("list"); setActiveId(null); setExportText(null); };
+  const doWithUndo = useCallback((label, action, undoFn) => {
+    action();
+    if (undoAction?.timer) clearTimeout(undoAction.timer);
+    const timer = setTimeout(() => setUndoAction(null), 5000);
+    setUndoAction({ label, undo: () => { undoFn(); clearTimeout(timer); setUndoAction(null); }, timer });
+  }, [undoAction]);
+
+  const fadeTo = useCallback((fn) => {
+    setViewFade(0);
+    setTimeout(() => { fn(); setViewFade(1); }, 120);
+  }, []);
+  const openCtx = (id) => fadeTo(() => { setActiveId(id); setView("detail"); setEditReentry(false); setExpandLog(false); setShowAddTask(false); setEditingTaskId(null); setExportText(null); });
+  const goBack = () => fadeTo(() => { setView("list"); setActiveId(null); setExportText(null); });
 
   // Drag handlers
   const handleDragStart = (id) => (e) => { setDragId(id); e.dataTransfer.effectAllowed = "move"; };
@@ -230,6 +284,46 @@ export default function App() {
   };
   const handleDragEnd = () => { setDragId(null); setDragOver(null); };
 
+  const moveCtx = (id, dir) => {
+    setData(prev => {
+      const order = [...(prev.order || prev.contexts.map(c => c.id))];
+      const idx = order.indexOf(id);
+      const target = idx + dir;
+      if (target < 0 || target >= order.length) return prev;
+      [order[idx], order[target]] = [order[target], order[idx]];
+      const next = { ...prev, order };
+      persist(next); return next;
+    });
+  };
+
+  const syncPill = syncState !== "idle" && (
+    <div style={{
+      position: "fixed", top: 10, right: 10, zIndex: 999,
+      fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 12,
+      background: syncState === "saving" ? "#fef3c7" : syncState === "saved" ? "#dcfce7" : "#fee2e2",
+      color: syncState === "saving" ? "#92400e" : syncState === "saved" ? "#166534" : "#991b1b",
+      transition: "all 0.3s ease",
+      opacity: syncState === "saved" ? 0.6 : 1,
+    }}>
+      {syncState === "saving" ? "Saving..." : syncState === "saved" ? "Synced" : "Offline"}
+    </div>
+  );
+
+  const undoToast = undoAction && (
+    <div style={{
+      position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 9999,
+      background: "#1e293b", color: "#fff", padding: "10px 16px", borderRadius: 10,
+      fontSize: 13, fontFamily: "system-ui", display: "flex", alignItems: "center", gap: 12,
+      boxShadow: "0 4px 20px rgba(0,0,0,0.15)", animation: "fadeIn 0.15s ease",
+    }}>
+      <span>{undoAction.label}</span>
+      <button onClick={undoAction.undo} style={{
+        background: "#3b82f6", color: "#fff", border: "none", borderRadius: 5,
+        padding: "4px 12px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+      }}>Undo</button>
+    </div>
+  );
+
   if (loading) return (
     <div style={{ padding: 60, textAlign: "center", color: "#94a3b8", fontFamily: "system-ui" }}>
       <div style={{ fontSize: 24, marginBottom: 12 }}>&#8987;</div>
@@ -243,8 +337,14 @@ export default function App() {
   const ctxMap = {};
   data.contexts.forEach(c => { ctxMap[c.id] = c; });
   const ordered = order.map(id => ctxMap[id]).filter(Boolean);
-  const live = ordered.filter(c => !["complete", "archived", "paused"].includes(c.status));
+  const liveAll = ordered.filter(c => !["complete", "archived", "paused"].includes(c.status));
   const dormant = ordered.filter(c => ["complete", "archived", "paused"].includes(c.status));
+  const searchLower = search.toLowerCase();
+  const live = liveAll.filter(c => {
+    if (filterDomain && c.domain !== filterDomain) return false;
+    if (search && !c.name.toLowerCase().includes(searchLower) && !c.reentry?.toLowerCase().includes(searchLower)) return false;
+    return true;
+  });
 
   /* ---- DETAIL ---- */
   if (view === "detail" && ctx) {
@@ -259,7 +359,8 @@ export default function App() {
     ];
 
     return (
-      <div style={S.shell}><div style={S.wrap}>
+      <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
+        {syncPill}{undoToast}{undoToast}
         <button onClick={goBack} style={S.back}>&larr; Projects</button>
         <div style={{ marginBottom: 24 }}>
           <h2 style={S.h2}>{ctx.name}</h2>
@@ -276,7 +377,14 @@ export default function App() {
               setTimeout(() => exportRef.current?.select(), 50);
             }} style={{ ...S.ghostBtn, fontSize: 12, padding: "4px 10px", marginLeft: "auto" }}>Export for Claude</button>
           </div>
-          {ctx.stakeholders && <p style={{ fontSize: 13, color: "#94a3b8", margin: "8px 0 0" }}>{ctx.stakeholders}</p>}
+          <div style={{ margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 13, color: "#cbd5e1", flexShrink: 0 }}>Stakeholders:</span>
+            <input value={ctx.stakeholders || ""} onChange={e => mut(ctx.id, () => ({ stakeholders: e.target.value }))}
+              placeholder="Add stakeholders..."
+              style={{ fontSize: 13, color: "#94a3b8", background: "none", border: "none", borderBottom: "1px solid transparent", outline: "none", padding: "2px 0", flex: 1, fontFamily: "inherit" }}
+              onFocus={e => e.target.style.borderBottomColor = "#e2e8f0"}
+              onBlur={e => e.target.style.borderBottomColor = "transparent"} />
+          </div>
         </div>
 
         {exportText && (
@@ -303,7 +411,7 @@ export default function App() {
               <button onClick={() => setEditReentry(false)} style={S.ghostBtn}>Cancel</button>
             </div>
           </>) : (
-            <p style={{ fontSize: 14, color: "#334155", lineHeight: 1.65, margin: 0, whiteSpace: "pre-wrap" }}>
+            <p style={{ fontSize: 14, color: S.textMid, lineHeight: 1.65, margin: 0, whiteSpace: "pre-wrap" }}>
               {ctx.reentry || <span style={{ color: "#cbd5e1", fontStyle: "italic" }}>Empty &mdash; click Edit</span>}
             </p>
           )}
@@ -330,9 +438,13 @@ export default function App() {
             const isDoneGroup = g.key === "done";
             return (
               <div key={g.key} style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: g.color, marginBottom: 6 }}>{g.label} &middot; {items.length}</div>
-                {items.map(task => (
-                  <div key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", borderBottom: "1px solid #f1f5f9", opacity: isDoneGroup ? 0.4 : 1 }}>
+                <div onClick={isDoneGroup ? () => setShowDone(!showDone) : undefined}
+                  style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: g.color, marginBottom: 6, cursor: isDoneGroup ? "pointer" : "default" }}>
+                  {isDoneGroup && <span style={{ marginRight: 4 }}>{showDone ? "\u25BE" : "\u25B8"}</span>}
+                  {g.label} &middot; {items.length}
+                </div>
+                {(!isDoneGroup || showDone) && items.map(task => (
+                  <div key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", borderBottom: `1px solid ${S.border}`, opacity: isDoneGroup ? 0.4 : 1 }}>
                     <button onClick={() => {
                       const next = { todo: "in-progress", "in-progress": "done", done: "todo", blocked: "todo" };
                       mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: next[t.status] } : t) }));
@@ -347,13 +459,19 @@ export default function App() {
                         style={{ ...S.input, flex: 1, padding: "2px 6px", fontSize: 14 }} />
                     ) : (
                       <span onClick={() => { setEditingTaskId(task.id); setEditTaskBuf(task.text); }}
-                        style={{ flex: 1, fontSize: 14, color: isDoneGroup ? "#94a3b8" : "#1e293b", lineHeight: 1.5, cursor: "text", textDecoration: isDoneGroup ? "line-through" : "none", textDecorationColor: "#cbd5e1" }}>{task.text}</span>
+                        style={{ flex: 1, fontSize: 14, color: isDoneGroup ? S.textMuted : S.text, lineHeight: 1.5, cursor: "text", textDecoration: isDoneGroup ? "line-through" : "none", textDecorationColor: S.textMuted }}>{task.text}</span>
                     )}
                     <select value={task.status} onChange={e => mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: e.target.value } : t) }))}
                       style={{ fontSize: 11, color: "#94a3b8", background: "none", border: "1px solid #e2e8f0", borderRadius: 4, padding: "1px 2px", cursor: "pointer", flexShrink: 0 }}>
                       {TASK_STATUS.map(s => <option key={s}>{s}</option>)}
                     </select>
-                    <button onClick={() => mut(ctx.id, c => ({ tasks: c.tasks.filter(t => t.id !== task.id) }))}
+                    <button onClick={() => {
+                      const removed = task;
+                      doWithUndo(`Deleted "${task.text.slice(0, 30)}"`,
+                        () => mut(ctx.id, c => ({ tasks: c.tasks.filter(t => t.id !== task.id) })),
+                        () => mut(ctx.id, c => ({ tasks: [...c.tasks, removed] }))
+                      );
+                    }}
                       style={{ background: "none", border: "none", color: "#e2e8f0", cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0 }}
                       onMouseEnter={e => e.target.style.color = "#ef4444"} onMouseLeave={e => e.target.style.color = "#e2e8f0"}>&times;</button>
                   </div>
@@ -392,8 +510,13 @@ export default function App() {
         </section>
 
         <div style={{ marginTop: 32, paddingTop: 16, borderTop: "1px solid #f1f5f9", textAlign: "center" }}>
-          <button onClick={() => { if (confirm(`Archive "${ctx.name}"?`)) { mut(ctx.id, () => ({ status: "archived" })); goBack(); } }}
-            style={{ ...S.ghostBtn, color: "#cbd5e1", fontSize: 12 }}>Archive this project</button>
+          <button onClick={() => {
+            const prev = ctx.status;
+            doWithUndo(`Archived "${ctx.name}"`,
+              () => { mut(ctx.id, () => ({ status: "archived" })); goBack(); },
+              () => mut(ctx.id, () => ({ status: prev }))
+            );
+          }} style={{ ...S.ghostBtn, color: "#cbd5e1", fontSize: 12 }}>Archive this project</button>
         </div>
       </div></div>
     );
@@ -401,10 +524,11 @@ export default function App() {
 
   /* ---- LIST ---- */
   const totalOpen = data.contexts.reduce((n, c) => n + c.tasks.filter(t => t.status !== "done").length, 0);
-  const crits = live.filter(c => c.priority === "critical-path");
+  const crits = liveAll.filter(c => c.priority === "critical-path");
 
   return (
-    <div style={S.shell}><div style={S.wrap}>
+    <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
+      {syncPill}{undoToast}
       {loadError && (
         <div style={{ background: "#fef3c7", borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 13, color: "#92400e", border: "1px solid #fde68a" }}>
           {loadError}
@@ -412,8 +536,12 @@ export default function App() {
       )}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 20 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "#0f172a", letterSpacing: "-0.02em" }}>Projects</h1>
-          <p style={{ margin: "2px 0 0", fontSize: 13, color: "#94a3b8" }}>{live.length} active &middot; {totalOpen} open tasks &middot; drag to reorder</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: S.text, letterSpacing: "-0.02em" }}>Projects</h1>
+            <button onClick={toggleDark} title={dark ? "Light mode" : "Dark mode"}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 16, padding: 0, color: S.textMuted }}>{dark ? "\u2600" : "\u263E"}</button>
+          </div>
+          <p style={{ margin: "2px 0 0", fontSize: 13, color: S.textMuted }}>{live.length} active &middot; {totalOpen} open tasks &middot; drag to reorder</p>
         </div>
         <button onClick={() => setShowNew(true)} style={S.primaryBtn}>+ New project</button>
       </div>
@@ -444,11 +572,40 @@ export default function App() {
         </div>
       )}
 
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search projects..."
+          style={{ ...S.input, fontSize: 13, padding: "6px 10px" }} />
+        <select value={filterDomain} onChange={e => setFilterDomain(e.target.value)} style={{ ...S.sel, fontSize: 12 }}>
+          <option value="">All domains</option>
+          {Object.entries(DOMAINS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+        </select>
+        {(search || filterDomain) && <button onClick={() => { setSearch(""); setFilterDomain(""); }} style={{ ...S.textBtn, fontSize: 12, flexShrink: 0 }}>Clear</button>}
+      </div>
+
       {crits.length > 0 && (
-        <div style={{ background: "#fef2f2", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: "#1e293b", border: "1px solid #fecaca" }}>
+        <div style={{ background: dark ? "#3b1111" : "#fef2f2", borderRadius: 8, padding: "10px 14px", marginBottom: 16, fontSize: 13, color: S.text, border: dark ? "1px solid #7f1d1d" : "1px solid #fecaca" }}>
           <span style={{ fontWeight: 700, color: "#dc2626" }}>Critical path: </span>{crits.map(c => c.name).join(" \u2192 ")}
         </div>
       )}
+
+      {(() => {
+        // "What should I work on?" — find the stalest critical-path project, or stalest active
+        const candidates = liveAll.filter(c => c.status === "active" || c.status === "blocked");
+        if (candidates.length === 0) return null;
+        const withStaleness = candidates.map(c => ({ ...c, stale: staleness(c) }));
+        const critStale = withStaleness.filter(c => c.priority === "critical-path").sort((a, b) => b.stale.days - a.stale.days);
+        const pick = critStale[0] || withStaleness.sort((a, b) => b.stale.days - a.stale.days)[0];
+        if (!pick) return null;
+        const dm = DOMAINS[pick.domain] || { label: pick.domain, color: "#64748b" };
+        const nextTask = pick.tasks.find(t => t.status === "in-progress") || pick.tasks.find(t => t.status === "todo");
+        return (
+          <div onClick={() => openCtx(pick.id)} style={{ background: dark ? "#1e3a5f" : "#eff6ff", borderRadius: 8, padding: "12px 16px", marginBottom: 16, border: dark ? "1px solid #2563eb33" : "1px solid #bfdbfe", cursor: "pointer" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em", color: "#3b82f6", marginBottom: 4 }}>Suggested next</div>
+            <div style={{ fontSize: 14, fontWeight: 600, color: S.text }}>{pick.name} <span style={{ fontWeight: 400, color: S.textMuted }}>&middot; {pick.stale.text}</span></div>
+            {nextTask && <div style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>{nextTask.status === "in-progress" ? "\u25D1" : "\u25CB"} {nextTask.text}</div>}
+          </div>
+        );
+      })()}
 
       {live.map(c => {
         const dm = DOMAINS[c.domain] || { label: c.domain, color: "#64748b" };
@@ -468,9 +625,9 @@ export default function App() {
             onDragEnd={handleDragEnd}
             onClick={() => { if (!dragId) openCtx(c.id); }}
             style={{
-              background: isOver ? "#eff6ff" : "#fff",
+              background: isOver ? (dark ? "#1e3a5f" : "#eff6ff") : S.card,
               borderRadius: 8, padding: "14px 16px", marginBottom: 8, cursor: "grab",
-              border: isOver ? "1px dashed #3b82f6" : isBlocked ? "1px solid #fca5a5" : "1px solid #f1f5f9",
+              border: isOver ? "1px dashed #3b82f6" : isBlocked ? "1px solid #fca5a5" : `1px solid ${S.border}`,
               borderLeft: `3px solid ${isBlocked ? "#dc2626" : dm.color}`,
               opacity: isDragging ? 0.4 : 1,
               transition: "background 0.15s, opacity 0.15s, border 0.15s",
@@ -478,18 +635,28 @@ export default function App() {
             }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0, flex: 1 }}>
-                <span style={{ color: "#cbd5e1", cursor: "grab", flexShrink: 0, fontSize: 14, lineHeight: 1, userSelect: "none" }} title="Drag to reorder">{"\u2807"}</span>
-                <span style={{ fontSize: 15, fontWeight: 600, color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                <span style={{ display: "flex", flexDirection: "column", gap: 0, flexShrink: 0 }}>
+                  <button onClick={e => { e.stopPropagation(); moveCtx(c.id, -1); }}
+                    style={{ background: "none", border: "none", color: "#cbd5e1", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}
+                    title="Move up">{"\u25B2"}</button>
+                  <button onClick={e => { e.stopPropagation(); moveCtx(c.id, 1); }}
+                    style={{ background: "none", border: "none", color: "#cbd5e1", cursor: "pointer", padding: 0, fontSize: 10, lineHeight: 1 }}
+                    title="Move down">{"\u25BC"}</button>
+                </span>
+                <span style={{ fontSize: 15, fontWeight: 600, color: S.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
                 <span style={{ fontSize: 11, fontWeight: 600, padding: "1px 6px", borderRadius: 4, background: sm.bg, color: sm.fg, flexShrink: 0 }}>{sm.label}</span>
               </div>
               <span style={{ color: "#cbd5e1", flexShrink: 0 }}>&rarr;</span>
             </div>
-            <p style={{ fontSize: 13, color: "#64748b", margin: "6px 0 0", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+            <p style={{ fontSize: 13, color: S.textMid, margin: "6px 0 0", lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
               {c.reentry || "No re-entry note"}
             </p>
             <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center" }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: dm.color }}>{dm.label}</span>
               {c.priority === "critical-path" && <span style={{ fontSize: 11, fontWeight: 600, color: "#dc2626" }}>Critical</span>}
+              {(() => { const s = staleness(c); return (
+                <span style={{ fontSize: 11, color: s.color, fontWeight: s.days >= 7 ? 600 : 400, marginLeft: 4 }}>{s.text}</span>
+              ); })()}
               {total > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: "auto" }}>
                   <div style={{ width: 48, height: 4, background: "#f1f5f9", borderRadius: 2, overflow: "hidden" }}>
@@ -510,7 +677,7 @@ export default function App() {
           </button>
           {showDormant && dormant.map(c => (
             <div key={c.id} onClick={() => openCtx(c.id)}
-              style={{ padding: "10px 14px", marginTop: 4, cursor: "pointer", borderRadius: 6, background: "#f8fafc", borderLeft: `3px solid ${(DOMAINS[c.domain] || {}).color || "#94a3b8"}` }}>
+              style={{ padding: "10px 14px", marginTop: 4, cursor: "pointer", borderRadius: 6, background: S.card, borderLeft: `3px solid ${(DOMAINS[c.domain] || {}).color || "#94a3b8"}` }}>
               <span style={{ fontSize: 14, color: "#64748b" }}>{c.name}</span>
               <span style={{ fontSize: 11, color: "#cbd5e1", marginLeft: 8 }}>{c.status}</span>
             </div>
@@ -525,23 +692,71 @@ export default function App() {
             saveData(SEED);
           }
         }} style={{ background: "none", border: "none", color: "#e2e8f0", fontSize: 11, cursor: "pointer" }}>Reset to defaults</button>
+        <p style={{ fontSize: 11, color: "#e2e8f0", margin: "8px 0 0" }}>Press <kbd style={{ background: "#f1f5f9", padding: "1px 5px", borderRadius: 3, fontSize: 11, border: "1px solid #e2e8f0" }}>L</kbd> to quick-log</p>
       </div>
+
+      {quickLog && (
+        <div onClick={() => setQuickLog(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.3)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: S.card, borderRadius: 12, padding: "20px 24px", width: "100%", maxWidth: 420, boxShadow: "0 8px 30px rgba(0,0,0,0.25)" }}>
+            <h3 style={{ margin: "0 0 14px", fontSize: 15, fontWeight: 700, color: S.text }}>Quick log</h3>
+            <select value={quickLog.ctxId} onChange={e => setQuickLog({ ...quickLog, ctxId: e.target.value })}
+              autoFocus
+              style={{ ...S.sel, width: "100%", fontSize: 14, padding: "8px 10px", marginBottom: 10, boxSizing: "border-box" }}>
+              <option value="">Pick a project...</option>
+              {live.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+            <input value={quickLog.text} onChange={e => setQuickLog({ ...quickLog, text: e.target.value })}
+              placeholder="What did you do?"
+              onKeyDown={e => {
+                if (e.key === "Enter" && quickLog.text.trim() && quickLog.ctxId) {
+                  mut(quickLog.ctxId, c => ({ log: [{ id: uid(), date: today(), text: quickLog.text.trim(), dur: quickLog.dur }, ...c.log] }));
+                  setQuickLog(null);
+                }
+              }}
+              style={{ ...S.input, width: "100%", marginBottom: 10, boxSizing: "border-box" }} />
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <select value={quickLog.dur} onChange={e => setQuickLog({ ...quickLog, dur: e.target.value })} style={{ ...S.sel, fontSize: 12 }}>
+                <option value="quick">Quick</option><option value="session">Session</option><option value="deep">Deep</option>
+              </select>
+              <button onClick={() => {
+                if (quickLog.text.trim() && quickLog.ctxId) {
+                  mut(quickLog.ctxId, c => ({ log: [{ id: uid(), date: today(), text: quickLog.text.trim(), dur: quickLog.dur }, ...c.log] }));
+                  setQuickLog(null);
+                }
+              }} style={S.primaryBtn}>Log</button>
+              <button onClick={() => setQuickLog(null)} style={S.ghostBtn}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div></div>
   );
 }
 
-const S = {
-  shell: { minHeight: "100vh", background: "#f8fafc", fontFamily: "-apple-system, system-ui, 'Segoe UI', sans-serif", padding: "20px 16px" },
-  wrap: { maxWidth: 620, margin: "0 auto" },
-  section: { background: "#fff", borderRadius: 8, padding: "16px 18px", marginBottom: 14, border: "1px solid #f1f5f9" },
-  h2: { margin: 0, fontSize: 20, fontWeight: 700, color: "#0f172a" },
-  h3: { margin: 0, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "#94a3b8" },
-  dtag: { fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, border: "1px solid" },
-  sel: { fontSize: 12, fontWeight: 600, padding: "4px 8px", borderRadius: 5, background: "#f8fafc", border: "1px solid #e2e8f0", color: "#475569", cursor: "pointer" },
-  input: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6, color: "#1e293b", fontSize: 14, padding: "8px 10px", fontFamily: "inherit", outline: "none", flex: 1 },
-  ta: { width: "100%", minHeight: 80, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 6, color: "#1e293b", fontSize: 14, padding: 10, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box", outline: "none" },
-  primaryBtn: { background: "#0f172a", color: "#fff", border: "none", fontWeight: 600, fontSize: 13, padding: "7px 16px", borderRadius: 6, cursor: "pointer" },
-  ghostBtn: { background: "none", border: "1px solid #e2e8f0", color: "#64748b", fontSize: 13, padding: "6px 14px", borderRadius: 6, cursor: "pointer" },
-  textBtn: { background: "none", border: "none", color: "#2563eb", fontSize: 13, fontWeight: 500, cursor: "pointer", padding: 0 },
-  back: { background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 14, padding: "4px 0", marginBottom: 16 },
-};
+function makeStyles(dark) {
+  const bg = dark ? "#0f172a" : "#f8fafc";
+  const card = dark ? "#1e293b" : "#fff";
+  const border = dark ? "#334155" : "#f1f5f9";
+  const borderMed = dark ? "#475569" : "#e2e8f0";
+  const text = dark ? "#e2e8f0" : "#0f172a";
+  const textMid = dark ? "#94a3b8" : "#475569";
+  const textMuted = dark ? "#64748b" : "#94a3b8";
+  const inputBg = dark ? "#1e293b" : "#fff";
+  return {
+    shell: { minHeight: "100vh", background: bg, fontFamily: "-apple-system, system-ui, 'Segoe UI', sans-serif", padding: "20px 16px", transition: "opacity 0.12s ease, background 0.3s ease" },
+    wrap: { maxWidth: 620, margin: "0 auto" },
+    section: { background: card, borderRadius: 8, padding: "16px 18px", marginBottom: 14, border: `1px solid ${border}` },
+    h2: { margin: 0, fontSize: 20, fontWeight: 700, color: text },
+    h3: { margin: 0, fontSize: 13, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: textMuted },
+    dtag: { fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4, border: "1px solid" },
+    sel: { fontSize: 12, fontWeight: 600, padding: "4px 8px", borderRadius: 5, background: dark ? "#334155" : "#f8fafc", border: `1px solid ${borderMed}`, color: textMid, cursor: "pointer" },
+    input: { background: inputBg, border: `1px solid ${borderMed}`, borderRadius: 6, color: text, fontSize: 14, padding: "8px 10px", fontFamily: "inherit", outline: "none", flex: 1 },
+    ta: { width: "100%", minHeight: 80, background: inputBg, border: `1px solid ${borderMed}`, borderRadius: 6, color: text, fontSize: 14, padding: 10, resize: "vertical", fontFamily: "inherit", lineHeight: 1.6, boxSizing: "border-box", outline: "none" },
+    primaryBtn: { background: dark ? "#3b82f6" : "#0f172a", color: "#fff", border: "none", fontWeight: 600, fontSize: 13, padding: "7px 16px", borderRadius: 6, cursor: "pointer" },
+    ghostBtn: { background: "none", border: `1px solid ${borderMed}`, color: textMid, fontSize: 13, padding: "6px 14px", borderRadius: 6, cursor: "pointer" },
+    textBtn: { background: "none", border: "none", color: "#3b82f6", fontSize: 13, fontWeight: 500, cursor: "pointer", padding: 0 },
+    back: { background: "none", border: "none", color: textMid, cursor: "pointer", fontSize: 14, padding: "4px 0", marginBottom: 16 },
+    // theme tokens for inline use
+    text, textMid, textMuted, card, border, borderMed, bg,
+  };
+}
