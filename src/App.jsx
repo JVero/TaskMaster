@@ -219,6 +219,22 @@ function Tracker({ demo }) {
     if (!skipPush) window.history.pushState({ view: "timeline" }, "", "#timeline");
   };
 
+  // Swipe-right to go back (mobile, detail/timeline only)
+  useEffect(() => {
+    let startX = 0, startY = 0;
+    const onStart = (e) => { startX = e.touches[0].clientX; startY = e.touches[0].clientY; };
+    const onEnd = (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = Math.abs(e.changedTouches[0].clientY - startY);
+      if (startX < 40 && dx > 80 && dy < dx * 0.5 && view !== "list") {
+        goBack();
+      }
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    return () => { window.removeEventListener("touchstart", onStart); window.removeEventListener("touchend", onEnd); };
+  }, [view]);
+
   // Hash-based routing
   useEffect(() => {
     const hash = window.location.hash.slice(1);
