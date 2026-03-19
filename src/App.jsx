@@ -342,25 +342,32 @@ function Tracker() {
   const openCtx = (id) => fadeTo(() => { setActiveId(id); setView("detail"); setEditReentry(false); setExpandLog(false); setShowAddTask(false); setEditingTaskId(null); setExportText(null); });
   const goBack = () => fadeTo(() => { setView("list"); setActiveId(null); setExportText(null); });
 
-  // Drag handlers
+  // Drag handlers — live reorder on hover, persist on drop
   const handleDragStart = (id) => (e) => { setDragId(id); e.dataTransfer.effectAllowed = "move"; };
-  const handleDragOver = (id) => (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (id !== dragOver) setDragOver(id); };
-  const handleDrop = (targetId) => (e) => {
+  const handleDragOver = (id) => (e) => {
     e.preventDefault();
-    if (!dragId || dragId === targetId) { setDragId(null); setDragOver(null); return; }
+    e.dataTransfer.dropEffect = "move";
+    if (!dragId || id === dragId || id === dragOver) return;
+    setDragOver(id);
     setData(prev => {
       const order = [...(prev.order || prev.contexts.map(c => c.id))];
       const fromIdx = order.indexOf(dragId);
-      const toIdx = order.indexOf(targetId);
-      if (fromIdx === -1 || toIdx === -1) return prev;
+      const toIdx = order.indexOf(id);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return prev;
       order.splice(fromIdx, 1);
       order.splice(toIdx, 0, dragId);
-      const next = { ...prev, order };
-      persist(next); return next;
+      return { ...prev, order };
     });
+  };
+  const handleDrop = () => (e) => {
+    e.preventDefault();
+    setData(prev => { persist(prev); return prev; });
     setDragId(null); setDragOver(null);
   };
-  const handleDragEnd = () => { setDragId(null); setDragOver(null); };
+  const handleDragEnd = () => {
+    setData(prev => { persist(prev); return prev; });
+    setDragId(null); setDragOver(null);
+  };
 
   const moveCtx = (id, dir) => {
     setData(prev => {
@@ -699,7 +706,7 @@ function Tracker() {
             draggable
             onDragStart={handleDragStart(c.id)}
             onDragOver={handleDragOver(c.id)}
-            onDrop={handleDrop(c.id)}
+            onDrop={handleDrop()}
             onDragEnd={handleDragEnd}
             onClick={() => { if (!dragId) openCtx(c.id); }}
             style={{
