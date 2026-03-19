@@ -167,20 +167,40 @@ function Tracker({ demo }) {
 
   const toggleDark = () => setDark(d => { const v = !d; try { localStorage.setItem("tracker-dark", v ? "1" : "0"); } catch {} return v; });
 
-  // Quick-log keyboard shortcut
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e) => {
-      if (e.key === "l" && !e.ctrlKey && !e.metaKey && !e.altKey) {
-        const tag = document.activeElement?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const tag = document.activeElement?.tagName;
+      const inInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      // Escape: close quick-log, or go back from detail/timeline
+      if (e.key === "Escape") {
+        if (quickLog) { setQuickLog(null); return; }
+        if (!inInput && view !== "list") { goBack(); return; }
+      }
+
+      // Skip remaining shortcuts if in an input
+      if (inInput || e.ctrlKey || e.metaKey || e.altKey) return;
+
+      // L: quick-log
+      if (e.key === "l") {
         e.preventDefault();
         setQuickLog({ ctxId: view === "detail" && activeId ? activeId : "", text: "", dur: "session" });
       }
-      if (e.key === "Escape" && quickLog) setQuickLog(null);
+      // /: focus search (list view only)
+      if (e.key === "/" && view === "list") {
+        e.preventDefault();
+        document.querySelector('input[placeholder="Search..."]')?.focus();
+      }
+      // N: new project (list view only)
+      if (e.key === "n" && view === "list") {
+        e.preventDefault();
+        setShowNew(true);
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [view, quickLog]);
+  }, [view, quickLog, activeId]);
 
   // Mutation helpers
   const persist = useCallback((d) => {

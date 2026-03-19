@@ -210,7 +210,12 @@ export default function ListView({
             saveData(SEED);
           }
         }} style={{ background: "none", border: "none", color: "#D6D3D1", fontSize: 11, cursor: "pointer" }}>Reset to defaults</button>
-        <p style={{ fontSize: 11, color: "#D6D3D1", margin: "8px 0 0" }}>Press <kbd style={{ background: "#E7E5E4", padding: "1px 5px", borderRadius: 3, fontSize: 11, border: "1px solid #D6D3D1" }}>L</kbd> to quick-log</p>
+        <p style={{ fontSize: 11, color: "#D6D3D1", margin: "8px 0 0" }}>
+          {["L log", "/ search", "N new"].map((s, i) => {
+            const [key, label] = s.split(" ");
+            return <span key={i}>{i > 0 && <span style={{ margin: "0 6px" }}>&middot;</span>}<kbd style={{ background: "#E7E5E4", padding: "1px 5px", borderRadius: 3, fontSize: 11, border: "1px solid #D6D3D1" }}>{key}</kbd> {label}</span>;
+          })}
+        </p>
         <button onClick={signOut}
           style={{ background: "none", border: "none", color: "#D6D3D1", fontSize: 11, cursor: "pointer", marginTop: 8 }}>{demo ? "Exit demo" : "Sign out"}</button>
       </div>
