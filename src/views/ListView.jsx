@@ -27,11 +27,6 @@ export default function ListView({
     <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
       <SyncPill syncState={syncState} />
       <UndoToast undoAction={undoAction} />
-      {demo && (
-        <div style={{ background: "#EDF5F0", borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 13, color: "#4A7C5C", border: "1px solid #bbf7d0", textAlign: "center" }}>
-          Demo mode — changes are saved locally in your browser
-        </div>
-      )}
       {loadError && (
         <div style={{ background: "#fef3c7", borderRadius: 8, padding: "8px 14px", marginBottom: 12, fontSize: 13, color: "#92400e", border: "1px solid #fde68a" }}>
           {loadError}
@@ -39,6 +34,11 @@ export default function ListView({
       )}
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 16px", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 12px", borderBottom: `1px solid ${S.border}` }}>
         <div style={{ maxWidth: maxW, margin: "0 auto" }}>
+          {demo && (
+            <div style={{ background: "#EDF5F0", borderRadius: 8, padding: "6px 14px", marginBottom: 10, fontSize: 13, color: "#4A7C5C", border: "1px solid #bbf7d0", textAlign: "center" }}>
+              Demo mode — changes are saved locally in your browser
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
             <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>Projects</h1>
             <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
