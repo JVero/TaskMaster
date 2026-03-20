@@ -1,11 +1,13 @@
 // src/views/DetailView.jsx
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { DOMAINS, STATUS_META, PRIORITY_META, STATUS_OPTIONS, PRIORITY_OPTIONS, TASK_STATUS } from "../lib/constants";
 import { SERIF } from "../lib/styles";
 import { uid, today, exportForClaude } from "../lib/helpers";
 import SyncPill from "../components/SyncPill";
 import UndoToast from "../components/UndoToast";
+
+const FOCUS_DURATION = 25 * 60 * 1000; // 25 minutes
 
 export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, viewFade, syncState, undoAction }) {
   const [editReentry, setEditReentry] = useState(false);
@@ -21,8 +23,88 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
   const [exportText, setExportText] = useState(null);
   const [copiedReentry, setCopiedReentry] = useState(false);
   const [reentryCollapsed, setReentryCollapsed] = useState(false);
+  const [focusStart, setFocusStart] = useState(null);
+  const [focusRemaining, setFocusRemaining] = useState(0);
+  const [focusDone, setFocusDone] = useState(false);
   const taRef = useRef(null);
   const exportRef = useRef(null);
+  const logInputRef = useRef(null);
+  const notifPermRef = useRef(false);
+
+  // Focus timer tick
+  useEffect(() => {
+    if (!focusStart) return;
+    const tick = () => {
+      const elapsed = Date.now() - focusStart;
+      const remaining = FOCUS_DURATION - elapsed;
+      if (remaining <= 0) {
+        setFocusRemaining(0);
+        setFocusStart(null);
+        setFocusDone(true);
+        setExpandLog(false);
+        setLogDur("deep");
+        try { new Notification("Session done \u2014 log what you did?", { body: ctx.name, icon: "/favicon.svg" }); } catch {}
+        return;
+      }
+      setFocusRemaining(remaining);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [focusStart, ctx.name]);
+
+  // Recalculate on tab visibility change
+  useEffect(() => {
+    if (!focusStart) return;
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        const remaining = FOCUS_DURATION - (Date.now() - focusStart);
+        if (remaining <= 0) {
+          setFocusRemaining(0);
+          setFocusStart(null);
+          setFocusDone(true);
+          setExpandLog(false);
+          setLogDur("deep");
+          try { new Notification("Session done \u2014 log what you did?", { body: ctx.name, icon: "/favicon.svg" }); } catch {}
+        } else {
+          setFocusRemaining(remaining);
+        }
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [focusStart, ctx.name]);
+
+  // Auto-focus log input when focus session completes
+  useEffect(() => {
+    if (focusDone) setTimeout(() => logInputRef.current?.focus(), 200);
+  }, [focusDone]);
+
+  const startFocus = useCallback(() => {
+    if (!notifPermRef.current && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission();
+      notifPermRef.current = true;
+    }
+    setFocusStart(Date.now());
+    setFocusRemaining(FOCUS_DURATION);
+    setFocusDone(false);
+  }, []);
+
+  const cancelFocus = useCallback(() => {
+    setFocusStart(null);
+    setFocusRemaining(0);
+  }, []);
+
+  const dismissFocusDone = useCallback(() => setFocusDone(false), []);
+
+  const formatTime = (ms) => {
+    const s = Math.ceil(ms / 1000);
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return `${m}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  const isMobile = maxW <= 560;
 
   const moveTask = (taskId, dir) => {
     mut(ctx.id, c => {
@@ -57,6 +139,35 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
     { key: "done", label: "Done", icon: "\u25CF", color: "#059669" },
   ];
 
+  if (isMobile && focusStart) {
+    const progress = 1 - (focusRemaining / FOCUS_DURATION);
+    return (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9999, background: S.bg,
+        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+        padding: "env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px)",
+      }}>
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0,
+          height: `${progress * 100}%`,
+          background: S.accent + "0A",
+          transition: "height 1s linear",
+        }} />
+        <span style={{ fontSize: 14, color: S.textMuted, marginBottom: 12, letterSpacing: "0.03em" }}>{ctx.name}</span>
+        <span style={{
+          fontSize: 72, fontWeight: 300, fontVariantNumeric: "tabular-nums",
+          color: S.text, fontFamily: "ui-monospace, monospace",
+          letterSpacing: "-0.02em",
+        }}>{formatTime(focusRemaining)}</span>
+        <span style={{ fontSize: 13, color: S.textMuted, marginTop: 16 }}>Focus session</span>
+        <button onClick={cancelFocus} style={{
+          ...S.ghostBtn, marginTop: 48, fontSize: 13, color: S.textMuted,
+          borderColor: S.border, padding: "8px 24px",
+        }}>Cancel</button>
+      </div>
+    );
+  }
+
   return (
     <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
       <SyncPill syncState={syncState} />
@@ -74,12 +185,31 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           <select value={ctx.priority} onChange={e => mut(ctx.id, () => ({ priority: e.target.value }))}
             style={{ ...S.sel, color: pm.fg }}>{PRIORITY_OPTIONS.map(p => <option key={p}>{p}</option>)}</select>
           <span style={{ ...S.dtag, borderColor: dm.color + "44", color: dm.color }}>{dm.label}</span>
-          <button onClick={() => {
-            const text = exportForClaude(ctx);
-            setExportText(text);
-            navigator.clipboard.writeText(text).then(() => {}, () => {});
-            setTimeout(() => exportRef.current?.select(), 50);
-          }} style={{ ...S.ghostBtn, fontSize: 12, padding: "4px 10px", marginLeft: "auto" }}>Export for Claude</button>
+          <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+            {focusStart ? (
+              <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{
+                  fontSize: 13, fontWeight: 600, fontVariantNumeric: "tabular-nums",
+                  color: S.accent, fontFamily: "ui-monospace, monospace",
+                  animation: "focusPulse 2s ease-in-out infinite",
+                }}>{formatTime(focusRemaining)}</span>
+                <button onClick={cancelFocus} title="Cancel focus session"
+                  style={{ background: "none", border: "none", color: S.textMuted, cursor: "pointer", fontSize: 14, padding: "0 2px", lineHeight: 1 }}
+                  onMouseEnter={e => e.target.style.color = "#ef4444"} onMouseLeave={e => e.target.style.color = S.textMuted}>&times;</button>
+              </span>
+            ) : (
+              <button onClick={startFocus} title="Start 25-minute focus session"
+                style={{ ...S.ghostBtn, fontSize: 12, padding: "4px 10px" }}>
+                {"\u23F1"} Focus
+              </button>
+            )}
+            <button onClick={() => {
+              const text = exportForClaude(ctx);
+              setExportText(text);
+              navigator.clipboard.writeText(text).then(() => {}, () => {});
+              setTimeout(() => exportRef.current?.select(), 50);
+            }} style={{ ...S.ghostBtn, fontSize: 12, padding: "4px 10px" }}>Export for Claude</button>
+          </span>
         </div>
         <div style={{ margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
           <span style={{ fontSize: 13, color: "#D6D3D1", flexShrink: 0 }}>Stakeholders:</span>
@@ -215,19 +345,35 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
         {ctx.tasks.length === 0 && <p style={{ color: "#D6D3D1", fontSize: 14, margin: 0 }}>No tasks yet.</p>}
       </section>
 
+      {focusDone && (
+        <section style={{
+          background: S.accent + "12", border: `1px solid ${S.accent}33`, borderRadius: 8,
+          padding: "14px 18px", marginBottom: 14,
+          animation: "focusBannerIn 0.3s ease-out",
+        }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 14, fontWeight: 500, color: S.accent }}>
+              Focus session complete &mdash; what did you accomplish?
+            </span>
+            <button onClick={dismissFocusDone}
+              style={{ background: "none", border: "none", color: S.textMuted, cursor: "pointer", fontSize: 14, padding: "0 2px" }}>&times;</button>
+          </div>
+        </section>
+      )}
+
       <section style={S.section}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
           <h3 style={S.h3}>Work log</h3>
           <button onClick={() => setExpandLog(!expandLog)} style={S.textBtn}>{expandLog ? "Collapse" : "Show"} ({ctx.log.length})</button>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          <input value={logText} onChange={e => setLogText(e.target.value)} placeholder="What did you do?"
-            onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); } }}
-            style={{ ...S.input, flex: 1, fontSize: 13 }} />
+          <input ref={logInputRef} value={logText} onChange={e => setLogText(e.target.value)} placeholder={focusDone ? "What did you accomplish?" : "What did you do?"}
+            onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); setFocusDone(false); } }}
+            style={{ ...S.input, flex: 1, fontSize: 13, ...(focusDone ? { borderColor: S.accent + "66" } : {}) }} />
           <select value={logDur} onChange={e => setLogDur(e.target.value)} style={{ ...S.sel, fontSize: 12 }}>
             <option value="quick">Quick</option><option value="session">Session</option><option value="deep">Deep</option>
           </select>
-          <button onClick={() => { if (logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); } }} style={S.primaryBtn}>Log</button>
+          <button onClick={() => { if (logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); setFocusDone(false); } }} style={S.primaryBtn}>Log</button>
         </div>
         {expandLog && ctx.log.length > 0 && (
           <div style={{ marginTop: 12 }}>{ctx.log.map(e => (
