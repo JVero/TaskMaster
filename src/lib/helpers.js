@@ -3,7 +3,10 @@
 import { DOMAINS } from "./constants";
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
-export const today = () => new Date().toISOString().slice(0, 10);
+export const now = () => new Date().toISOString();
+export const today = () => now().slice(0, 10);
+export const dateOf = (entry) => entry.date.slice(0, 10);
+export const timeOf = (entry) => entry.date.length > 10 ? new Date(entry.date).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : null;
 
 export function staleness(ctx) {
   if (!ctx.log.length) return { text: "No activity", days: Infinity, color: "#A8A29E" };
@@ -40,7 +43,8 @@ export function exportForClaude(ctx) {
     lines.push('');
     lines.push(`## Recent work log (last 5)`);
     ctx.log.slice(0, 5).forEach(e => {
-      lines.push(`- ${e.date} [${e.dur}]: ${e.text}`);
+      const time = timeOf(e);
+      lines.push(`- ${dateOf(e)}${time ? " " + time : ""} [${e.dur}]: ${e.text}`);
     });
   }
   return lines.join('\n');

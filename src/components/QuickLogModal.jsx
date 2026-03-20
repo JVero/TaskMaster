@@ -1,13 +1,13 @@
 // src/components/QuickLogModal.jsx
 
-import { uid, today } from "../lib/helpers";
+import { uid, now } from "../lib/helpers";
 import { SERIF } from "../lib/styles";
 
 export default function QuickLogModal({ quickLog, setQuickLog, live, mut, S }) {
   if (!quickLog) return null;
   const submit = () => {
     if (quickLog.text.trim() && quickLog.ctxId) {
-      mut(quickLog.ctxId, c => ({ log: [{ id: uid(), date: today(), text: quickLog.text.trim(), dur: quickLog.dur }, ...c.log] }));
+      mut(quickLog.ctxId, c => ({ log: [{ id: uid(), date: now(), text: quickLog.text.trim(), dur: quickLog.dur }, ...c.log] }));
       setQuickLog(null);
     }
   };

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { DOMAINS, STATUS_META, PRIORITY_META, STATUS_OPTIONS, PRIORITY_OPTIONS, TASK_STATUS } from "../lib/constants";
 import { SERIF } from "../lib/styles";
-import { uid, today, exportForClaude } from "../lib/helpers";
+import { uid, now, dateOf, timeOf, exportForClaude } from "../lib/helpers";
 import SyncPill from "../components/SyncPill";
 import UndoToast from "../components/UndoToast";
 
@@ -126,7 +126,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
     if (oldStatus === newStatus) return;
     const labels = { "done": "Completed", "in-progress": "Started", "blocked": "Blocked", "todo": oldStatus === "in-progress" ? "Paused" : "Reopened" };
     const label = labels[newStatus] || `${oldStatus} → ${newStatus}`;
-    mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: `${label}: ${taskText}`, dur: "auto" }, ...c.log] }));
+    mut(ctx.id, c => ({ log: [{ id: uid(), date: now(), text: `${label}: ${taskText}`, dur: "auto" }, ...c.log] }));
   };
 
   const dm = DOMAINS[ctx.domain] || { label: ctx.domain, color: "#78716C" };
@@ -368,17 +368,17 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
         </div>
         <div style={{ display: "flex", gap: 8 }}>
           <input ref={logInputRef} value={logText} onChange={e => setLogText(e.target.value)} placeholder={focusDone ? "What did you accomplish?" : "What did you do?"}
-            onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); setFocusDone(false); } }}
+            onKeyDown={e => { if (e.key === "Enter" && logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: now(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); setFocusDone(false); } }}
             style={{ ...S.input, flex: 1, fontSize: 13, ...(focusDone ? { borderColor: S.accent + "66" } : {}) }} />
           <select value={logDur} onChange={e => setLogDur(e.target.value)} style={{ ...S.sel, fontSize: 12 }}>
             <option value="quick">Quick</option><option value="session">Session</option><option value="deep">Deep</option>
           </select>
-          <button onClick={() => { if (logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: today(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); setFocusDone(false); } }} style={S.primaryBtn}>Log</button>
+          <button onClick={() => { if (logText.trim()) { mut(ctx.id, c => ({ log: [{ id: uid(), date: now(), text: logText.trim(), dur: logDur }, ...c.log] })); setLogText(""); setFocusDone(false); } }} style={S.primaryBtn}>Log</button>
         </div>
         {expandLog && ctx.log.length > 0 && (
           <div style={{ marginTop: 12 }}>{ctx.log.map(e => (
             <div key={e.id} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: "1px solid #E7E5E4", alignItems: "baseline" }}>
-              <span style={{ fontSize: 12, color: "#A8A29E", fontFamily: "ui-monospace, monospace", minWidth: 78, flexShrink: 0 }}>{e.date}</span>
+              <span style={{ fontSize: 12, color: "#A8A29E", fontFamily: "ui-monospace, monospace", minWidth: 78, flexShrink: 0 }}>{dateOf(e)}{timeOf(e) ? ` ${timeOf(e)}` : ""}</span>
               <span style={{ fontSize: 13, color: e.dur === "auto" ? "#A8A29E" : "#57534E", flex: 1, fontStyle: e.dur === "auto" ? "italic" : "normal" }}>{e.text}</span>
               {e.dur !== "auto" && <span style={{ fontSize: 11, color: "#D6D3D1", flexShrink: 0, textTransform: "uppercase" }}>{e.dur}</span>}
               <button onClick={() => mut(ctx.id, c => ({ log: c.log.filter(l => l.id !== e.id) }))}

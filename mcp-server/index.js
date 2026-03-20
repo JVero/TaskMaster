@@ -90,7 +90,7 @@ function formatProject(ctx, verbose) {
     if (ctx.log.length > 0) {
       out += `\n### Recent log (last 5)\n`;
       ctx.log.slice(0, 5).forEach((e) => {
-        out += `- ${e.date} [${e.dur}]: ${e.text}\n`;
+        out += `- ${dateOf(e)} [${e.dur}]: ${e.text}\n`;
       });
     }
   }
@@ -99,7 +99,8 @@ function formatProject(ctx, verbose) {
 }
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-const today = () => new Date().toISOString().slice(0, 10);
+const now = () => new Date().toISOString();
+const dateOf = (entry) => entry.date.slice(0, 10);
 
 // --- MCP server ---
 
@@ -164,7 +165,7 @@ server.tool(
     if (!ctx) {
       return { content: [{ type: "text", text: `No project found matching "${project}".` }] };
     }
-    ctx.log.unshift({ id: uid(), date: today(), text, dur: duration });
+    ctx.log.unshift({ id: uid(), date: now(), text, dur: duration });
     await saveState(state);
     return { content: [{ type: "text", text: `Logged to "${ctx.name}": ${text} [${duration}]` }] };
   }
@@ -215,7 +216,7 @@ server.tool(
     if (old !== status) {
       const labels = { "done": "Completed", "in-progress": "Started", "blocked": "Blocked", "todo": old === "in-progress" ? "Paused" : "Reopened" };
       const label = labels[status] || `${old} → ${status}`;
-      ctx.log.unshift({ id: uid(), date: today(), text: `${label}: ${t.text}`, dur: "auto" });
+      ctx.log.unshift({ id: uid(), date: now(), text: `${label}: ${t.text}`, dur: "auto" });
     }
     t.status = status;
     await saveState(state);

@@ -2,7 +2,7 @@
 
 import { DOMAINS, DAY_NAMES, MONTH_NAMES } from "../lib/constants";
 import { SERIF } from "../lib/styles";
-import { today } from "../lib/helpers";
+import { today, dateOf, timeOf } from "../lib/helpers";
 import SyncPill from "../components/SyncPill";
 import UndoToast from "../components/UndoToast";
 
@@ -23,9 +23,11 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
 
   const byDate = {};
   entries.forEach(e => {
-    if (!byDate[e.date]) byDate[e.date] = [];
-    byDate[e.date].push(e);
+    const day = dateOf(e);
+    if (!byDate[day]) byDate[day] = [];
+    byDate[day].push(e);
   });
+  Object.values(byDate).forEach(arr => arr.sort((a, b) => b.date.localeCompare(a.date)));
   const sortedDates = Object.keys(byDate).sort((a, b) => b.localeCompare(a));
 
   const dayGrid = [];
@@ -88,6 +90,7 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
             {byDate[dateStr].map(entry => (
               <div key={entry.id} onClick={() => openCtx(entry.ctxId)}
                 style={{ padding: "10px 0 10px 14px", borderLeft: `2px solid ${entry.domain.color}`, marginBottom: 6, cursor: "pointer", marginLeft: 2 }}>
+                {timeOf(entry) && <div style={{ fontSize: 11, color: S.textMuted, marginBottom: 2 }}>{timeOf(entry)}</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontSize: 14, color: entry.dur === "auto" ? S.textMuted : S.text, lineHeight: 1.5, flex: 1, fontStyle: entry.dur === "auto" ? "italic" : "normal" }}>{entry.text}</span>
                   {entry.dur !== "auto" && <span style={{ fontSize: 11, color: S.textMuted, flexShrink: 0, textTransform: "uppercase" }}>{entry.dur}</span>}
