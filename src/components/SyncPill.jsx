@@ -2,16 +2,24 @@
 
 export default function SyncPill({ syncState }) {
   if (syncState === "idle") return null;
+  const configs = {
+    saving: { bg: "#FDF6E3", color: "#8B6914", border: "#F0DFA0", label: "Saving..." },
+    saved: { bg: "#EFF8F0", color: "#2D6A3E", border: "#C2E5C8", label: "Synced" },
+    offline: { bg: "#FDF0EE", color: "#8B2E1A", border: "#F0C4BC", label: "Offline" },
+  };
+  const c = configs[syncState] || configs.offline;
   return (
     <div style={{
       position: "fixed", top: 10, right: 10, zIndex: 999,
-      fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 12,
-      background: syncState === "saving" ? "#fef3c7" : syncState === "saved" ? "#dcfce7" : "#fee2e2",
-      color: syncState === "saving" ? "#92400e" : syncState === "saved" ? "#166534" : "#991b1b",
+      fontSize: 11, fontWeight: 550, padding: "3px 12px", borderRadius: 10,
+      background: c.bg, color: c.color, border: `1px solid ${c.border}`,
       transition: "all 0.3s ease",
-      opacity: syncState === "saved" ? 0.6 : 1,
+      opacity: syncState === "saved" ? 0.7 : 1,
+      boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+      letterSpacing: "0.01em",
+      animation: "pillFadeIn 0.2s ease-out",
     }}>
-      {syncState === "saving" ? "Saving..." : syncState === "saved" ? "Synced" : "Offline"}
+      {c.label}
     </div>
   );
 }

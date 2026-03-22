@@ -24,8 +24,8 @@ function AuthGate({ children }) {
 
   if (session === undefined) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, background: "#FAF9F6" }}>
-        <div style={{ color: "#A8A29E", fontSize: 14 }}>Loading...</div>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, background: "#F7F5F0" }}>
+        <div style={{ color: "#A09A92", fontSize: 14 }}>Loading...</div>
       </div>
     );
   }
@@ -42,11 +42,11 @@ function AuthGate({ children }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, background: "#FAF9F6", padding: 20 }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, background: "#F7F5F0", padding: 20 }}>
       <div style={{ textAlign: "center", maxWidth: 320, width: "100%" }}>
         <div style={{ fontSize: 28, marginBottom: 16 }}>{"\uD83D\uDD12"}</div>
         <h2 style={{ margin: "0 0 4px", fontSize: 18, fontWeight: 700, color: "#1C1917", fontFamily: SERIF }}>Project Tracker</h2>
-        <p style={{ margin: "0 0 20px", fontSize: 13, color: "#A8A29E" }}>Sign in to continue</p>
+        <p style={{ margin: "0 0 20px", fontSize: 13, color: "#A09A92" }}>Sign in to continue</p>
         <input
           autoFocus type="email" value={email}
           onChange={e => { setEmail(e.target.value); setError(""); }}
@@ -54,9 +54,10 @@ function AuthGate({ children }) {
           placeholder="Email"
           style={{
             width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 15,
-            border: `1px solid ${error ? "#fca5a5" : "#D6D3D1"}`, borderRadius: 8,
+            border: `1px solid ${error ? "#fca5a5" : "#D4CFC6"}`, borderRadius: 8,
             outline: "none", fontFamily: "inherit", marginBottom: 10,
-            background: error ? "#fef2f2" : "#fff",
+            background: error ? "#fef2f2" : "#FFFDF9",
+            transition: "border-color 0.15s ease",
           }}
         />
         <input
@@ -66,16 +67,18 @@ function AuthGate({ children }) {
           placeholder="Password"
           style={{
             width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 15,
-            border: `1px solid ${error ? "#fca5a5" : "#D6D3D1"}`, borderRadius: 8,
+            border: `1px solid ${error ? "#fca5a5" : "#D4CFC6"}`, borderRadius: 8,
             outline: "none", fontFamily: "inherit", marginBottom: 10,
-            background: error ? "#fef2f2" : "#fff",
+            background: error ? "#fef2f2" : "#FFFDF9",
+            transition: "border-color 0.15s ease",
           }}
         />
         <button onClick={signIn} disabled={loading}
           style={{
             width: "100%", padding: "10px 0", fontSize: 14, fontWeight: 600,
-            background: "#C15F3C", color: "#fff", border: "none", borderRadius: 8,
+            background: "#B8533A", color: "#fff", border: "none", borderRadius: 8,
             cursor: loading ? "wait" : "pointer", opacity: loading ? 0.7 : 1,
+            transition: "opacity 0.15s ease",
           }}>
           {loading ? "Signing in..." : "Sign in"}
         </button>
@@ -325,7 +328,7 @@ function Tracker({ demo }) {
 
   // Loading state
   if (loading) return (
-    <div style={{ padding: 60, textAlign: "center", color: "#A8A29E", fontFamily: SANS }}>
+    <div style={{ padding: 60, textAlign: "center", color: "#A09A92", fontFamily: SANS }}>
       <div style={{ fontSize: 24, marginBottom: 12 }}>&#8987;</div>
       Loading&hellip;
     </div>

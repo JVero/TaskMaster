@@ -40,33 +40,38 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
   return (
     <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
       <SyncPill syncState={syncState} />
-      <UndoToast undoAction={undoAction} />
-      <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 16px", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 12px", borderBottom: `1px solid ${S.border}` }}>
+      <UndoToast undoAction={undoAction} S={S} />
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 20px", padding: "calc(16px + env(safe-area-inset-top, 0px)) 20px 14px", borderBottom: `1px solid ${S.border}` }}>
         <div style={{ maxWidth: maxW, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-            <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>This week</h1>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: S.text, letterSpacing: "-0.02em", fontFamily: SERIF }}>This week</h1>
             <button onClick={goBack} style={{ ...S.textBtn, fontSize: 13 }}>Back to projects</button>
           </div>
           <p style={{ margin: "4px 0 0", fontSize: 13, color: S.textMuted }}>{entries.length} log {entries.length === 1 ? "entry" : "entries"} in the last 7 days</p>
         </div>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 28 }}>
+      <div style={{
+        display: "flex", justifyContent: "space-between", marginBottom: 28,
+        background: S.card, borderRadius: 10, padding: "14px 8px",
+        border: `1px solid ${S.border}`, boxShadow: S.shadow,
+      }}>
         {dayGrid.map(d => {
           const isToday = d.key === today();
           return (
             <div key={d.key} style={{ textAlign: "center", flex: 1 }}>
-              <div style={{ fontSize: 11, color: S.textMuted, marginBottom: 4, fontWeight: isToday ? 600 : 400 }}>{d.day}</div>
+              <div style={{ fontSize: 11, color: S.textMuted, marginBottom: 4, fontWeight: isToday ? 600 : 400, letterSpacing: "0.02em" }}>{d.day}</div>
               <div style={{
                 width: 32, height: 32, borderRadius: "50%", margin: "0 auto 4px",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 13, fontWeight: isToday ? 700 : 400, fontVariantNumeric: "tabular-nums",
                 color: isToday ? "#fff" : d.hasEntries ? S.text : S.textMuted,
                 background: isToday ? S.accent : "transparent",
+                transition: "background 0.15s ease",
               }}>{d.date}</div>
-              <div style={{ display: "flex", gap: 3, justifyContent: "center" }}>
+              <div style={{ display: "flex", gap: 3, justifyContent: "center", minHeight: 4 }}>
                 {d.count > 0 && Array.from({ length: Math.min(d.count, 4) }).map((_, i) => (
-                  <span key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: isToday ? S.accent : S.textMuted }} />
+                  <span key={i} style={{ width: 4, height: 4, borderRadius: "50%", background: isToday ? S.accent : S.textMuted, opacity: isToday ? 1 : 0.5 }} />
                 ))}
               </div>
             </div>
@@ -85,17 +90,26 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
         const label = isToday ? "Today" : isYesterday ? "Yesterday" : `${DAY_NAMES[d.getDay()]}, ${MONTH_NAMES[d.getMonth()]} ${d.getDate()}`;
 
         return (
-          <div key={dateStr} style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: S.textMuted, marginBottom: 10 }}>{label}</div>
+          <div key={dateStr} style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 11, fontWeight: 650, textTransform: "uppercase", letterSpacing: "0.08em", color: S.textMuted, marginBottom: 10 }}>{label}</div>
             {byDate[dateStr].map(entry => (
               <div key={entry.id} onClick={() => openCtx(entry.ctxId)}
-                style={{ padding: "10px 0 10px 14px", borderLeft: `2px solid ${entry.domain.color}`, marginBottom: 6, cursor: "pointer", marginLeft: 2 }}>
+                style={{
+                  padding: "10px 14px", borderLeft: `3px solid ${entry.domain.color}`,
+                  marginBottom: 6, cursor: "pointer",
+                  background: S.card, borderRadius: "0 8px 8px 0",
+                  border: `1px solid ${S.border}`, borderLeftWidth: 3, borderLeftColor: entry.domain.color,
+                  boxShadow: S.shadow,
+                  transition: "box-shadow 0.15s ease, border-color 0.15s ease",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = S.shadowLg; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = S.shadow; }}>
                 {timeOf(entry) && <div style={{ fontSize: 11, color: S.textMuted, marginBottom: 2 }}>{timeOf(entry)}</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
                   <span style={{ fontSize: 14, color: entry.dur === "auto" ? S.textMuted : S.text, lineHeight: 1.5, flex: 1, fontStyle: entry.dur === "auto" ? "italic" : "normal" }}>{entry.text}</span>
-                  {entry.dur !== "auto" && <span style={{ fontSize: 11, color: S.textMuted, flexShrink: 0, textTransform: "uppercase" }}>{entry.dur}</span>}
+                  {entry.dur !== "auto" && <span style={{ ...S.chip, fontSize: 10, padding: "1px 7px", color: S.textMuted, background: S.textMuted + "12", textTransform: "uppercase" }}>{entry.dur}</span>}
                 </div>
-                <div style={{ fontSize: 12, color: entry.domain.color, fontWeight: 500, marginTop: 2 }}>{entry.ctxName}</div>
+                <div style={{ fontSize: 12, color: entry.domain.color, fontWeight: 500, marginTop: 3 }}>{entry.ctxName}</div>
               </div>
             ))}
           </div>
