@@ -224,6 +224,36 @@ server.tool(
   }
 );
 
+// WRITE: reorder tasks
+server.tool(
+  "reorder_tasks",
+  "Reorder tasks within a project. Pass task texts in the desired order (partial match). Use get_project first to see current tasks. Unmatched tasks are appended at the end.",
+  {
+    project: z.string().describe("Project name or ID"),
+    tasks: z.array(z.string()).describe("Task texts in desired order (partial match)"),
+  },
+  async ({ project, tasks }) => {
+    const state = await loadState();
+    const ctx = findCtx(state, project);
+    if (!ctx) {
+      return { content: [{ type: "text", text: `No project found matching "${project}".` }] };
+    }
+    const remaining = [...ctx.tasks];
+    const ordered = [];
+    for (const query of tasks) {
+      const lower = query.toLowerCase();
+      const idx = remaining.findIndex((t) => t.text.toLowerCase().includes(lower));
+      if (idx !== -1) {
+        ordered.push(remaining.splice(idx, 1)[0]);
+      }
+    }
+    // Append any tasks that weren't matched
+    ctx.tasks = [...ordered, ...remaining];
+    await saveState(state);
+    return { content: [{ type: "text", text: `Reordered ${ordered.length}/${ordered.length + remaining.length} tasks in "${ctx.name}".${remaining.length > 0 ? ` ${remaining.length} unmatched tasks appended at end.` : ""}` }] };
+  }
+);
+
 // WRITE: update project status
 server.tool(
   "update_project_status",
