@@ -53,7 +53,7 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
 
       <div style={{
         display: "flex", justifyContent: "space-between", marginBottom: 28,
-        background: S.card, borderRadius: 10, padding: "14px 8px",
+        background: S.cardBg, borderRadius: 10, padding: "14px 8px",
         border: `1px solid ${S.border}`, boxShadow: S.shadow,
       }}>
         {dayGrid.map(d => {
@@ -97,7 +97,7 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
                 style={{
                   padding: "10px 14px", borderLeft: `3px solid ${entry.domain.color}`,
                   marginBottom: 6, cursor: "pointer",
-                  background: S.card, borderRadius: "0 8px 8px 0",
+                  background: S.cardBg, borderRadius: "0 8px 8px 0",
                   border: `1px solid ${S.border}`, borderLeftWidth: 3, borderLeftColor: entry.domain.color,
                   boxShadow: S.shadow,
                   transition: "box-shadow 0.15s ease, border-color 0.15s ease",

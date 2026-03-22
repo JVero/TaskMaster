@@ -7,7 +7,7 @@ export const ACCENT = { light: "#B8533A", dark: "#D4795E" };
 export function makeStyles(dark, maxW = 560) {
   const accent = dark ? ACCENT.dark : ACCENT.light;
   const bg = dark ? "#1A1714" : "#F7F5F0";
-  const card = dark ? "#252019" : "#FFFDF9";
+  const cardBg = dark ? "#252019" : "#FFFDF9";
   const cardHover = dark ? "#2C261E" : "#FDFBF6";
   const border = dark ? "#352F28" : "#E8E3DB";
   const borderMed = dark ? "#4A4238" : "#D4CFC6";
@@ -29,7 +29,7 @@ export function makeStyles(dark, maxW = 560) {
     },
     wrap: { maxWidth: maxW, margin: "0 auto", transition: "max-width 0.3s ease" },
     section: {
-      background: card, borderRadius: 10, padding: "16px 18px", marginBottom: 14,
+      background: cardBg, borderRadius: 10, padding: "16px 18px", marginBottom: 14,
       border: `1px solid ${border}`, boxShadow: shadow,
     },
     h2: { margin: 0, fontSize: 22, fontWeight: 700, color: text, fontFamily: SERIF, letterSpacing: "-0.01em" },
@@ -70,7 +70,7 @@ export function makeStyles(dark, maxW = 560) {
     // project card in list view
     card: {
       padding: "14px 16px", marginBottom: 8, borderRadius: 10,
-      background: card, border: `1px solid ${border}`, boxShadow: shadow,
+      background: cardBg, border: `1px solid ${border}`, boxShadow: shadow,
       cursor: "pointer",
       transition: "box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease",
     },
@@ -85,6 +85,6 @@ export function makeStyles(dark, maxW = 560) {
       cursor: "pointer",
       transition: "box-shadow 0.15s ease",
     },
-    accent, text, textMid, textMuted, card, cardHover: cardHover, border, borderMed, bg, shadow, shadowLg, inputBg,
+    accent, text, textMid, textMuted, cardBg, cardHover, border, borderMed, bg, shadow, shadowLg, inputBg,
   };
 }

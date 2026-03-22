@@ -194,7 +194,7 @@ export default function ListView({
           </button>
           {showDormant && dormant.map(c => (
             <div key={c.id} onClick={() => openCtx(c.id)}
-              style={{ padding: "10px 16px", cursor: "pointer", marginTop: 6, borderRadius: 8, background: S.card, border: `1px solid ${S.border}`, transition: "border-color 0.15s ease" }}
+              style={{ padding: "10px 16px", cursor: "pointer", marginTop: 6, borderRadius: 8, background: S.cardBg, border: `1px solid ${S.border}`, transition: "border-color 0.15s ease" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = S.borderMed}
               onMouseLeave={e => e.currentTarget.style.borderColor = S.border}>
               <span style={{ fontSize: 14, color: S.textMuted }}>{c.name}</span>
