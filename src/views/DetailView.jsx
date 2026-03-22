@@ -125,7 +125,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
   const autoLog = (taskText, oldStatus, newStatus) => {
     if (oldStatus === newStatus) return;
     const labels = { "done": "Completed", "in-progress": "Started", "blocked": "Blocked", "todo": oldStatus === "in-progress" ? "Paused" : "Reopened" };
-    const label = labels[newStatus] || `${oldStatus} → ${newStatus}`;
+    const label = labels[newStatus] || `${oldStatus} \u2192 ${newStatus}`;
     mut(ctx.id, c => ({ log: [{ id: uid(), date: now(), text: `${label}: ${taskText}`, dur: "auto" }, ...c.log] }));
   };
 
@@ -171,7 +171,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
   return (
     <div style={{ ...S.shell, opacity: viewFade }}><div style={S.wrap}>
       <SyncPill syncState={syncState} />
-      <UndoToast undoAction={undoAction} />
+      <UndoToast undoAction={undoAction} S={S} />
       <div style={{ position: "sticky", top: 0, zIndex: 100, background: S.bg, margin: "-24px -20px 0", padding: "calc(12px + env(safe-area-inset-top, 0px)) 20px 10px", borderBottom: `1px solid ${S.border}` }}>
         <div style={{ maxWidth: maxW, margin: "0 auto" }}>
           <button onClick={goBack} style={{ ...S.back, margin: 0 }}>&larr; Projects</button>
@@ -184,7 +184,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
             style={{ ...S.sel, background: sm.bg, color: sm.fg }}>{STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}</select>
           <select value={ctx.priority} onChange={e => mut(ctx.id, () => ({ priority: e.target.value }))}
             style={{ ...S.sel, color: pm.fg }}>{PRIORITY_OPTIONS.map(p => <option key={p}>{p}</option>)}</select>
-          <span style={{ ...S.dtag, borderColor: dm.color + "44", color: dm.color }}>{dm.label}</span>
+          <span style={{ ...S.chip, borderRadius: 10, color: dm.color, background: dm.color + "14", border: `1px solid ${dm.color}22` }}>{dm.label}</span>
           <span style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
             {focusStart ? (
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -212,11 +212,11 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           </span>
         </div>
         <div style={{ margin: "8px 0 0", display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 13, color: "#D6D3D1", flexShrink: 0 }}>Stakeholders:</span>
+          <span style={{ fontSize: 13, color: S.textMuted, flexShrink: 0 }}>Stakeholders:</span>
           <input value={ctx.stakeholders || ""} onChange={e => mut(ctx.id, () => ({ stakeholders: e.target.value }))}
             placeholder="Add stakeholders..."
-            style={{ fontSize: 13, color: "#A8A29E", background: "none", border: "none", borderBottom: "1px solid transparent", outline: "none", padding: "2px 0", flex: 1, fontFamily: "inherit" }}
-            onFocus={e => e.target.style.borderBottomColor = "#e2e8f0"}
+            style={{ fontSize: 13, color: S.textMid, background: "none", border: "none", borderBottom: "1px solid transparent", outline: "none", padding: "2px 0", flex: 1, fontFamily: "inherit", transition: "border-color 0.15s ease" }}
+            onFocus={e => e.target.style.borderBottomColor = S.border}
             onBlur={e => e.target.style.borderBottomColor = "transparent"} />
         </div>
       </div>
@@ -259,7 +259,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           </div>
         </>) : (
           <p style={{ fontSize: 14, color: S.textMid, lineHeight: 1.65, margin: 0, whiteSpace: "pre-wrap" }}>
-            {ctx.reentry || <span style={{ color: "#D6D3D1", fontStyle: "italic" }}>Empty &mdash; click Edit</span>}
+            {ctx.reentry || <span style={{ color: S.textMuted, fontStyle: "italic" }}>Empty &mdash; click Edit</span>}
           </p>
         ))}
       </section>
@@ -270,7 +270,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           <button onClick={() => setShowAddTask(true)} style={S.textBtn}>+ Add task</button>
         </div>
         {showAddTask && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14, marginTop: 8 }}>
             <input autoFocus value={newTask} onChange={e => setNewTask(e.target.value)} placeholder="What needs doing?"
               onKeyDown={e => {
                 if (e.key === "Enter" && newTask.trim()) { mut(ctx.id, c => ({ tasks: [{ id: uid(), text: newTask.trim(), status: "todo" }, ...c.tasks] })); setNewTask(""); }
@@ -286,12 +286,18 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           return (
             <div key={g.key} style={{ marginBottom: 16 }}>
               <div onClick={isDoneGroup ? () => setShowDone(!showDone) : undefined}
-                style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: g.color, marginBottom: 6, cursor: isDoneGroup ? "pointer" : "default" }}>
+                style={{ fontSize: 10, fontWeight: 650, textTransform: "uppercase", letterSpacing: "0.08em", color: g.color, marginBottom: 6, marginTop: 12, cursor: isDoneGroup ? "pointer" : "default" }}>
                 {isDoneGroup && <span style={{ marginRight: 4 }}>{showDone ? "\u25BE" : "\u25B8"}</span>}
                 {g.label} &middot; {items.length}
               </div>
               {(!isDoneGroup || showDone) && items.map((task, idx) => (
-                <div key={task.id} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0", borderBottom: `1px solid ${S.border}`, opacity: isDoneGroup ? 0.4 : 1 }}>
+                <div key={task.id} style={{
+                  display: "flex", alignItems: "flex-start", gap: 10,
+                  padding: "8px 0",
+                  borderBottom: `1px solid ${S.border}`,
+                  opacity: isDoneGroup ? 0.4 : 1,
+                  transition: "opacity 0.15s ease",
+                }}>
                   <button onClick={() => {
                     const next = { todo: "in-progress", "in-progress": "done", done: "todo", blocked: "todo" };
                     const newStatus = next[task.status];
@@ -325,7 +331,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
                     mut(ctx.id, c => ({ tasks: c.tasks.map(t => t.id === task.id ? { ...t, status: newStatus } : t) }));
                     autoLog(task.text, task.status, newStatus);
                   }}
-                    style={{ fontSize: 11, color: "#A8A29E", background: "none", border: "1px solid #D6D3D1", borderRadius: 4, padding: "1px 2px", cursor: "pointer", flexShrink: 0 }}>
+                    style={{ fontSize: 11, color: S.textMuted, background: "none", border: `1px solid ${S.border}`, borderRadius: 6, padding: "1px 2px", cursor: "pointer", flexShrink: 0 }}>
                     {TASK_STATUS.map(s => <option key={s}>{s}</option>)}
                   </select>
                   <button onClick={() => {
@@ -335,20 +341,21 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
                       () => mut(ctx.id, c => ({ tasks: [...c.tasks, removed] }))
                     );
                   }}
-                    style={{ background: "none", border: "none", color: "#D6D3D1", cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0 }}
-                    onMouseEnter={e => e.target.style.color = "#ef4444"} onMouseLeave={e => e.target.style.color = "#e2e8f0"}>&times;</button>
+                    style={{ background: "none", border: "none", color: S.textMuted, cursor: "pointer", fontSize: 16, padding: 0, flexShrink: 0, opacity: 0.4, transition: "opacity 0.15s ease, color 0.15s ease" }}
+                    onMouseEnter={e => { e.target.style.color = "#ef4444"; e.target.style.opacity = 1; }}
+                    onMouseLeave={e => { e.target.style.color = S.textMuted; e.target.style.opacity = 0.4; }}>&times;</button>
                 </div>
               ))}
             </div>
           );
         })}
-        {ctx.tasks.length === 0 && <p style={{ color: "#D6D3D1", fontSize: 14, margin: 0 }}>No tasks yet.</p>}
+        {ctx.tasks.length === 0 && <p style={{ color: S.textMuted, fontSize: 14, margin: "8px 0 0" }}>No tasks yet.</p>}
       </section>
 
       {focusDone && (
         <section style={{
-          background: S.accent + "12", border: `1px solid ${S.accent}33`, borderRadius: 8,
-          padding: "14px 18px", marginBottom: 14,
+          background: S.accent + "12", border: `1px solid ${S.accent}33`, borderRadius: 10,
+          padding: "14px 18px", marginBottom: 14, boxShadow: S.shadow,
           animation: "focusBannerIn 0.3s ease-out",
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -377,25 +384,26 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
         </div>
         {expandLog && ctx.log.length > 0 && (
           <div style={{ marginTop: 12 }}>{ctx.log.map(e => (
-            <div key={e.id} style={{ display: "flex", gap: 10, padding: "6px 0", borderBottom: "1px solid #E7E5E4", alignItems: "baseline" }}>
-              <span style={{ fontSize: 12, color: "#A8A29E", fontFamily: "ui-monospace, monospace", minWidth: 78, flexShrink: 0 }}>{dateOf(e)}{timeOf(e) ? ` ${timeOf(e)}` : ""}</span>
-              <span style={{ fontSize: 13, color: e.dur === "auto" ? "#A8A29E" : "#57534E", flex: 1, fontStyle: e.dur === "auto" ? "italic" : "normal" }}>{e.text}</span>
-              {e.dur !== "auto" && <span style={{ fontSize: 11, color: "#D6D3D1", flexShrink: 0, textTransform: "uppercase" }}>{e.dur}</span>}
+            <div key={e.id} style={{ display: "flex", gap: 10, padding: "7px 0", borderBottom: `1px solid ${S.border}`, alignItems: "baseline" }}>
+              <span style={{ fontSize: 12, color: S.textMuted, fontFamily: "ui-monospace, monospace", minWidth: 78, flexShrink: 0 }}>{dateOf(e)}{timeOf(e) ? ` ${timeOf(e)}` : ""}</span>
+              <span style={{ fontSize: 13, color: e.dur === "auto" ? S.textMuted : S.textMid, flex: 1, fontStyle: e.dur === "auto" ? "italic" : "normal" }}>{e.text}</span>
+              {e.dur !== "auto" && <span style={{ ...S.chip, fontSize: 10, padding: "1px 7px", color: S.textMuted, background: S.textMuted + "12", textTransform: "uppercase" }}>{e.dur}</span>}
               <button onClick={() => mut(ctx.id, c => ({ log: c.log.filter(l => l.id !== e.id) }))}
-                style={{ background: "none", border: "none", color: "#D6D3D1", cursor: "pointer", fontSize: 13 }}>&times;</button>
+                style={{ background: "none", border: "none", color: S.textMuted, cursor: "pointer", fontSize: 13, opacity: 0.4, transition: "opacity 0.15s ease" }}
+                onMouseEnter={e => e.target.style.opacity = 1} onMouseLeave={e => e.target.style.opacity = 0.4}>&times;</button>
             </div>
           ))}</div>
         )}
       </section>
 
-      <div style={{ marginTop: 32, paddingTop: 16, borderTop: "1px solid #E7E5E4", textAlign: "center" }}>
+      <div style={{ marginTop: 36, paddingTop: 16, borderTop: `1px solid ${S.border}`, textAlign: "center" }}>
         <button onClick={() => {
           const prev = ctx.status;
           doWithUndo(`Archived "${ctx.name}"`,
             () => { mut(ctx.id, () => ({ status: "archived" })); goBack(); },
             () => mut(ctx.id, () => ({ status: prev }))
           );
-        }} style={{ ...S.ghostBtn, color: "#D6D3D1", fontSize: 12 }}>Archive this project</button>
+        }} style={{ ...S.ghostBtn, color: S.textMuted, fontSize: 12 }}>Archive this project</button>
       </div>
     </div></div>
   );
