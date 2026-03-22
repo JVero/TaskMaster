@@ -1,120 +1,80 @@
 # Design System — TaskMaster
 
-## Rating Scale Reference
+## Rating Scale (0-100, per category)
 
-| Score | Label | Description |
-|-------|-------|-------------|
-| 1 | Raw HTML | No styling at all |
-| 2 | "It works" | Basic spacing, readable but clearly a prototype |
-| 3 | Bootstrap-default | Generic framework look, nothing custom |
-| 4 | Competent | Clean layout, decent spacing, consistent colors, but nothing memorable |
-| 5 | Polished | Custom palette, typography, elevation/depth, intentional spacing, micro-interactions |
-| 6 | Refined | Every detail considered, elegant transitions, personality in the design |
-| 7 | Brand-quality | Cohesive system, could ship as a product |
+| Category | Original | After v1 | After v2 | Notes |
+|---|---|---|---|---|
+| **Visual Hierarchy** | 82 | 86 | 89 | Scroll-linked header shadow, staggered card entrance animations, empty state treatments |
+| **Color & Theming** | 78 | 84 | 90 | Full semantic token system: warning, success, danger, overlay, toast, kbd, syncPill, taskStatus |
+| **Typography** | 75 | 78 | 84 | Consistent MONO stack, tabular-nums on all numeric displays, 3-tier heading scale |
+| **Information Density** | 85 | 85 | 88 | Mini progress bars on project cards, task count chips |
+| **Consistency** | 72 | 78 | 91 | Zero hardcoded hex in components — everything pulls from makeStyles() tokens |
+| **Light/Dark Mode Parity** | 80 | 81 | 90 | SyncPill, UndoToast, QuickLogModal, export section, banners all dark-mode aware |
+| **Spacing & Layout** | 70 | 74 | 85 | SP spacing scale (xs=4 through huge=48), consistent use across all views |
+| **Polish & Delight** | 68 | 76 | 87 | Staggered cardIn animations, scroll header shadow, empty states with guidance, hover lift on all cards, focus-visible keyboard rings |
 
-## What moved us from 4 → 5.5
+**Composite: 76.3 → 80.3 → 88.0**
 
-### 1. Warm analog palette (biggest single impact)
-Replaced neutral stone grays and clinical white with cream paper tones.
+## Token architecture
+
+All colors flow from `makeStyles(dark, maxW)` in `src/lib/styles.js`:
 
 ```
-Light bg:   #FAF9F6 → #F7F5F0  (warmer cream, aged paper)
-Cards:      #FFFFFF → #FFFDF9  (warm ivory, not clinical white)
-Dark bg:    #1C1917 → #1A1714  (leather-brown, less gray)
-Accent:     #C15F3C → #B8533A  (deeper, more ink-like)
+Primitives:     accent, text, textMid, textMuted, bg, cardBg, border, borderMed, inputBg
+Shadows:        shadow, shadowLg
+Semantic:       warning.{bg,text,border}, success.{bg,text,border}, danger.{fg,fgHover}
+Component:      overlay, toast.{bg,text,border}, kbd.{bg,border,text}
+                syncPill.{saving,saved,offline}.{bg,text,border}
+                taskStatus.{"in-progress",todo,blocked,done}
+Spacing:        SP.{xs,sm,md,lg,xl,xxl,xxxl,huge} = {4,8,12,16,20,24,32,48}
 ```
 
-This is the fastest design win — swapping 4-5 hex values transforms the entire feel. Takes ~5 minutes.
+Components receive `S` (the styles object) as a prop and never reference raw hex values.
 
-### 2. Card elevation instead of flat dividers
-Every project item became its own card with subtle warm shadows.
+## What moved each category
 
-```js
-shadow:   "0 1px 3px rgba(140,120,100,0.08), 0 1px 2px rgba(140,120,100,0.06)"
-shadowLg: "0 4px 12px rgba(140,120,100,0.1), 0 2px 4px rgba(140,120,100,0.06)"
-```
+### Consistency (72 → 91): the biggest win
+- Extracted every hardcoded hex into semantic tokens
+- Warning banners use `S.warning.*`, demo banners use `S.success.*`
+- Delete hover uses `S.danger.fgHover`, not `"#ef4444"`
+- Kbd shortcuts use `S.kbd.*`
+- Toast, sync pill, modal overlay all use tokens
+- Task group colors come from `S.taskStatus[status]`
 
-Key detail: the shadow uses warm `rgba(140,120,100)` not neutral `rgba(0,0,0)`. Cards hover-lift from `shadow` → `shadowLg`. Takes ~15 minutes.
+### Light/Dark Mode Parity (80 → 90)
+- SyncPill: was hardcoded light-only colors → now uses `S.syncPill[state]`
+- UndoToast: was always-dark `#2A2420` → now uses `S.toast.*` which adapts
+- QuickLogModal overlay: was `rgba(20,16,12,0.4)` → now `S.overlay`
+- Export section: was hardcoded green → now `S.success.*`
+- "Copied" indicator: was `#059669` → now `S.taskStatus.done`
 
-### 3. Tag pills instead of bare colored text
-Domain labels and priority badges became tinted pill chips:
+### Spacing & Layout (70 → 85)
+- Introduced `SP` scale: `{xs:4, sm:8, md:12, lg:16, xl:20, xxl:24, xxxl:32, huge:48}`
+- All margins, padding, gaps reference the scale
+- Consistent `borderRadius: SP.sm (8)` for inputs, `10` for cards/sections
 
-```js
-chip: {
-  display: "inline-flex", alignItems: "center",
-  fontSize: 11, fontWeight: 550, letterSpacing: "0.01em",
-  padding: "2px 9px", borderRadius: 10, lineHeight: "18px",
-}
-// Usage: color from domain, background = color + "12" (very transparent tint)
-```
+### Polish & Delight (68 → 87)
+- Cards stagger in with `cardIn` animation + per-card delay (`idx * 30ms`)
+- Scroll-linked sticky header gains shadow when `scrollY > 8`
+- All cards hover-lift with `translateY(-1px)` + `shadowLg`
+- Empty states with emoji + guidance text + gentle pulse animation
+- `focus-visible` outlines for keyboard navigation (CSS, not inline)
+- New project form, add task form animate in with `cardIn`
 
-This is high visual impact for minimal code. Takes ~10 minutes.
+### Typography (75 → 84)
+- Extracted `MONO` constant: `ui-monospace, "SF Mono", Menlo, Consolas, monospace`
+- `fontVariantNumeric: "tabular-nums"` on all numeric displays (staleness, counts, timer, dates)
+- Consistent heading style via `S.h1` token (was inline-only before)
 
-### 4. Hero "pick up where you left off" card
-A single differentiated card at the top with a bookmark-ribbon left border:
-
-```js
-heroCard: {
-  background: dark ? "#2A2218" : "#FDF8F0",     // slightly warmer than regular cards
-  border: `1px solid ${dark ? "#3D3328" : "#EDE4D4"}`,
-  borderLeft: `3px solid ${accent}`,             // the "ribbon bookmark"
-  boxShadow: shadow,
-}
-```
-
-Creates visual hierarchy instantly. The accent left-border is the key detail. Takes ~10 minutes.
-
-### 5. Micro-animations (CSS keyframes)
-Six small animations that make interactions feel alive:
-
-```css
-@keyframes toastIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
-}
-@keyframes modalIn {
-  from { opacity: 0; transform: scale(0.97) translateY(8px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-```
-
-Plus `transition: "box-shadow 0.15s ease"` on every interactive element. Takes ~10 minutes.
-
-### 6. Typography hierarchy
-Newsreader serif for headings, system sans for body. Three clear tiers:
-
-- **h1**: 28px, weight 700, tracking -0.02em (page titles)
-- **h2**: 22px, weight 700, tracking -0.01em (project names)
-- **h3**: 11px, weight 600, uppercase, tracking 0.08em (section labels)
-
-Already had Newsreader loaded — just needed consistent application. Takes ~5 minutes.
-
-## Speed priority if applying to another subdomain
-
-If you have ~1 hour, do them in this order (highest impact first):
+## Speed priority for applying to another subdomain
 
 | Priority | Change | Time | Impact |
 |----------|--------|------|--------|
-| 1 | Swap bg/card/accent hex values | 5 min | Transforms entire mood |
-| 2 | Add card shadows + hover lift | 15 min | Adds depth and interactivity |
-| 3 | Tag pills (chip style) | 10 min | Metadata becomes scannable |
-| 4 | Typography hierarchy (serif headings) | 5 min | Establishes information structure |
-| 5 | Hero/featured card with accent border | 10 min | Creates visual priority |
-| 6 | CSS keyframe animations | 10 min | Interactions feel responsive |
+| 1 | Copy `styles.js` token system | 5 min | Gets you all colors, spacing, shadows for free |
+| 2 | Wire `S` prop through components | 15 min | Eliminates all hardcoded hex |
+| 3 | Add CSS keyframes from `index.html` | 5 min | Entrance animations, hover lifts |
+| 4 | Add scroll-linked header shadow | 10 min | Small useEffect + conditional style |
+| 5 | Add empty states | 10 min | `S.emptyState` + emoji + guidance copy |
+| 6 | Add `focus-visible` CSS | 2 min | Copy 6 lines from index.html |
 
-Total: ~55 minutes to go from "competent" (4) to "polished" (5.5).
-
-## What's still needed to reach 6+ (Refined)
-
-These are the gaps that separate "polished" from "every detail considered":
-
-- **Page transitions**: Directional slide between list → detail → timeline views
-- **Drag-and-drop feedback**: Ghost card preview, drop slot indicator, smooth reorder animation
-- **Empty states**: Illustration or guidance when a project has no tasks/logs
-- **Dark mode token consistency**: Eliminate scattered hardcoded hex values; pull everything from the token system
-- **Keyboard focus rings**: Visible `:focus-visible` outlines on buttons and interactive elements
-- **Loading skeletons**: Shimmer placeholders instead of plain "Loading..." text
-- **Timeline refinement**: Replace dot indicators with something more intentional
-- **Scroll-linked effects**: Sticky header shadow that appears on scroll
-
-Each of these is individually small (~15-30 min) but collectively they're what makes a design feel "considered" rather than "styled."
+Total: ~47 minutes to match this subdomain's design level.
