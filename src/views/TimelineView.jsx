@@ -64,8 +64,8 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
       </div>
 
       <div style={{
-        display: "flex", justifyContent: "space-between", marginBottom: SP.xxxl - 4,
-        background: S.cardBg, borderRadius: 10, padding: `${SP.md + 2}px ${SP.sm}px`,
+        display: "flex", justifyContent: "space-between", marginBottom: SP.xxxl,
+        background: S.cardBg, borderRadius: 8, padding: `${SP.lg}px ${SP.md}px`,
         border: `1px solid ${S.border}`, boxShadow: S.shadow,
       }}>
         {dayGrid.map(d => {
@@ -107,28 +107,28 @@ export default function TimelineView({ data, openCtx, goBack, S, maxW, viewFade,
 
         return (
           <div key={dateStr} style={{ marginBottom: SP.xxxl - 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 650, textTransform: "uppercase", letterSpacing: "0.08em", color: S.textMuted, marginBottom: 10 }}>{label}</div>
+            <div style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: S.textMuted, marginBottom: SP.md }}>{label}</div>
             {byDate[dateStr].map((entry, idx) => (
               <div key={entry.id} onClick={() => openCtx(entry.ctxId)}
                 style={{
-                  padding: `10px ${SP.md + 2}px`, borderLeft: `3px solid ${entry.domain.color}`,
-                  marginBottom: 6, cursor: "pointer",
-                  background: S.cardBg, borderRadius: "0 8px 8px 0",
-                  border: `1px solid ${S.border}`, borderLeftWidth: 3, borderLeftColor: entry.domain.color,
+                  padding: `${SP.md}px ${SP.lg}px`, borderLeft: `2px solid ${entry.domain.color}`,
+                  marginBottom: SP.sm, cursor: "pointer",
+                  background: S.cardBg, borderRadius: "0 6px 6px 0",
+                  border: `1px solid ${S.border}`, borderLeftWidth: 2, borderLeftColor: entry.domain.color,
                   boxShadow: S.shadow,
-                  transition: "box-shadow 0.15s ease, border-color 0.15s ease, transform 0.15s ease",
+                  transition: "box-shadow 0.2s ease, border-color 0.2s ease",
                   animation: "cardIn 0.2s ease-out",
                   animationFillMode: "backwards",
                   animationDelay: `${idx * 30}ms`,
                 }}
-                onMouseEnter={e => { e.currentTarget.style.boxShadow = S.shadowLg; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                onMouseLeave={e => { e.currentTarget.style.boxShadow = S.shadow; e.currentTarget.style.transform = "none"; }}>
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = S.shadowLg; }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = S.shadow; }}>
                 {timeOf(entry) && <div style={{ fontSize: 11, color: S.textMuted, marginBottom: 2, fontVariantNumeric: "tabular-nums" }}>{timeOf(entry)}</div>}
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: SP.sm }}>
                   <span style={{ fontSize: 14, color: entry.dur === "auto" ? S.textMuted : S.text, lineHeight: 1.5, flex: 1, fontStyle: entry.dur === "auto" ? "italic" : "normal" }}>{entry.text}</span>
                   {entry.dur !== "auto" && <span style={{ ...S.chip, fontSize: 10, padding: "1px 7px", color: S.textMuted, background: S.textMuted + "12", textTransform: "uppercase" }}>{entry.dur}</span>}
                 </div>
-                <div style={{ fontSize: 12, color: entry.domain.color, fontWeight: 500, marginTop: 3 }}>{entry.ctxName}</div>
+                <div style={{ fontSize: 12, color: entry.domain.color, fontWeight: 450, marginTop: SP.xs }}>{entry.ctxName}</div>
               </div>
             ))}
           </div>

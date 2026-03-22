@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="description" content="Personal research project tracker" />
-    <meta name="theme-color" content="#B8533A" />
+    <meta name="theme-color" content="#9C4430" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -17,7 +17,7 @@
     <style>
       * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
       button, a, select, input, [onClick] { touch-action: manipulation; }
-      ::selection { background: rgba(184, 83, 58, 0.15); }
+      ::selection { background: rgba(156, 68, 48, 0.12); }
       body { margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
       input::placeholder, textarea::placeholder { color: #C4BFB6; }
       @media (prefers-color-scheme: dark) {
@@ -26,13 +26,13 @@
 
       /* Focus-visible rings for keyboard navigation */
       :focus-visible {
-        outline: 2px solid rgba(184, 83, 58, 0.5);
+        outline: 2px solid rgba(156, 68, 48, 0.35);
         outline-offset: 2px;
         border-radius: 4px;
       }
       input:focus-visible, textarea:focus-visible, select:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 2px rgba(184, 83, 58, 0.3);
+        box-shadow: 0 0 0 2px rgba(156, 68, 48, 0.2);
       }
 
       /* Tabular nums globally for consistency */
@@ -64,7 +64,7 @@
         to { opacity: 1; transform: scale(1) translateY(0); }
       }
       @keyframes cardIn {
-        from { opacity: 0; transform: translateY(6px); }
+        from { opacity: 0; transform: translateY(3px); }
         to { opacity: 1; transform: translateY(0); }
       }
       @keyframes emptyPulse {
@@ -78,9 +78,9 @@
       // Set background before paint to prevent flash on refresh
       try {
         var d = localStorage.getItem('tracker-dark') === '1';
-        document.body.style.background = d ? '#1A1714' : '#F7F5F0';
+        document.body.style.background = d ? '#191715' : '#F0EDE8';
       } catch(e) {
-        document.body.style.background = '#F7F5F0';
+        document.body.style.background = '#F0EDE8';
       }
     </script>
     <div id="root"></div>

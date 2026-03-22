@@ -37,7 +37,8 @@ export default function ListView({
   const chipStyle = (color) => ({
     ...S.chip,
     color: color,
-    background: color + (dark ? "18" : "12"),
+    background: "transparent",
+    opacity: 0.85,
   });
 
   return (
@@ -126,11 +127,11 @@ export default function ListView({
         const nextTask = pick.tasks.find(t => t.status === "in-progress") || pick.tasks.find(t => t.status === "todo");
         return (
           <div onClick={() => openCtx(pick.id)} style={S.heroCard}
-            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.shadowLg; e.currentTarget.style.transform = "translateY(-1px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.boxShadow = S.shadow; e.currentTarget.style.transform = "none"; }}>
-            <div style={{ fontSize: 10, fontWeight: 650, textTransform: "uppercase", letterSpacing: "0.1em", color: S.accent, marginBottom: 6 }}>Pick up where you left off</div>
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = S.shadowLg; }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = S.shadow; }}>
+            <div style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.12em", color: S.accent, marginBottom: 8 }}>Pick up where you left off</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: SP.sm }}>
-              <span style={{ fontSize: 17, fontWeight: 600, color: S.text, fontFamily: SERIF }}>{pick.name}</span>
+              <span style={{ fontSize: 18, fontWeight: 400, color: S.text, fontFamily: SERIF }}>{pick.name}</span>
               <span style={{ fontWeight: 400, color: S.textMuted, fontSize: 13, fontFamily: SANS, fontVariantNumeric: "tabular-nums" }}>&middot; {pick.stale.text}</span>
             </div>
             {nextTask && <div style={{ fontSize: 13, color: S.textMid, marginTop: 5, lineHeight: 1.4 }}>{nextTask.status === "in-progress" ? "\u25D1" : "\u25CB"} {nextTask.text}</div>}
@@ -180,7 +181,6 @@ export default function ListView({
               opacity: isDragging ? 0.25 : 1,
               borderColor: isOver ? S.accent + "44" : isHovered ? S.borderMed : S.border,
               boxShadow: isHovered ? S.shadowLg : S.shadow,
-              transform: isHovered && !isDragging ? "translateY(-1px)" : "none",
               cursor: "grab",
               userSelect: "none",
               animation: "cardIn 0.2s ease-out",
@@ -189,8 +189,8 @@ export default function ListView({
             }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: SP.md }}>
               <div style={{ display: "flex", alignItems: "baseline", gap: SP.sm, minWidth: 0, flex: 1 }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: sm.fg, flexShrink: 0, position: "relative", top: -1, display: "inline-block", boxShadow: `0 0 0 2px ${sm.fg}22` }} />
-                <span style={{ fontSize: 16, fontWeight: 600, color: isBlocked ? S.danger.fg : S.text, fontFamily: SERIF, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: sm.fg, flexShrink: 0, position: "relative", top: -1, display: "inline-block" }} />
+                <span style={{ fontSize: 16, fontWeight: 500, color: isBlocked ? S.danger.fg : S.text, fontFamily: SERIF, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.name}</span>
               </div>
               <span style={{ fontSize: 12, color: stale.color, fontWeight: stale.days >= 7 ? 600 : 400, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{stale.text}</span>
             </div>
@@ -229,9 +229,9 @@ export default function ListView({
           </button>
           {showDormant && dormant.map(c => (
             <div key={c.id} onClick={() => openCtx(c.id)}
-              style={{ padding: `10px ${SP.lg}px`, cursor: "pointer", marginTop: 6, borderRadius: SP.sm, background: S.cardBg, border: `1px solid ${S.border}`, transition: "border-color 0.15s ease, transform 0.15s ease" }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = S.borderMed; e.currentTarget.style.transform = "translateY(-1px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = S.border; e.currentTarget.style.transform = "none"; }}>
+              style={{ padding: `10px ${SP.lg}px`, cursor: "pointer", marginTop: 6, borderRadius: 6, background: S.cardBg, border: `1px solid ${S.border}`, transition: "border-color 0.2s ease" }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = S.borderMed; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = S.border; }}>
               <span style={{ fontSize: 14, color: S.textMuted }}>{c.name}</span>
               <span style={{ fontSize: 11, color: S.textMuted, marginLeft: SP.sm, opacity: 0.5 }}>{STATUS_META[c.status]?.label || c.status}</span>
             </div>

@@ -11,18 +11,18 @@ export const DOMAINS = {
 };
 
 export const STATUS_META = {
-  active: { label: "Active", bg: "#EDF5F0", fg: "#4A7C5C" },
-  blocked: { label: "Blocked", bg: "#FDF0EE", fg: "#B04A33" },
-  paused: { label: "Paused", bg: "#F5F3EE", fg: "#92400e" },
+  active: { label: "Active", bg: "#F0F4F0", fg: "#4A7058" },
+  blocked: { label: "Blocked", bg: "#FAF0EE", fg: "#A04030" },
+  paused: { label: "Paused", bg: "#F4F2EE", fg: "#7A5A10" },
   complete: { label: "Done", bg: "#F0EFED", fg: "#78716C" },
   archived: { label: "Archived", bg: "#F0EFED", fg: "#A8A29E" },
 };
 
 export const PRIORITY_META = {
-  "critical-path": { label: "Critical path", fg: "#dc2626" },
+  "critical-path": { label: "Critical path", fg: "#A04030" },
   steady: { label: "Steady", fg: "#78716C" },
   background: { label: "Background", fg: "#A8A29E" },
-  someday: { label: "Someday", fg: "#D6D3D1" },
+  someday: { label: "Someday", fg: "#D0CCC8" },
 };
 
 export const STATUS_OPTIONS = ["active", "blocked", "paused", "complete", "archived"];

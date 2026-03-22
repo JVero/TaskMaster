@@ -197,7 +197,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
             style={{ ...S.sel, background: sm.bg, color: sm.fg }}>{STATUS_OPTIONS.map(s => <option key={s}>{s}</option>)}</select>
           <select value={ctx.priority} onChange={e => mut(ctx.id, () => ({ priority: e.target.value }))}
             style={{ ...S.sel, color: pm.fg }}>{PRIORITY_OPTIONS.map(p => <option key={p}>{p}</option>)}</select>
-          <span style={{ ...S.chip, borderRadius: 10, color: dm.color, background: dm.color + "14", border: `1px solid ${dm.color}22` }}>{dm.label}</span>
+          <span style={{ ...S.chip, color: dm.color }}>{dm.label}</span>
           <span style={{ marginLeft: "auto", display: "flex", gap: SP.sm, alignItems: "center" }}>
             {focusStart ? (
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -271,7 +271,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
             <button onClick={() => setEditReentry(false)} style={S.ghostBtn}>Cancel</button>
           </div>
         </>) : (
-          <p style={{ fontSize: 14, color: S.textMid, lineHeight: 1.65, margin: 0, whiteSpace: "pre-wrap" }}>
+          <p style={{ fontSize: 14, color: S.textMid, lineHeight: 1.7, margin: 0, whiteSpace: "pre-wrap" }}>
             {ctx.reentry || <span style={{ color: S.textMuted, fontStyle: "italic" }}>Empty &mdash; click Edit</span>}
           </p>
         ))}
@@ -300,16 +300,16 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
           return (
             <div key={g.key} style={{ marginBottom: SP.lg }}>
               <div onClick={isDoneGroup ? () => setShowDone(!showDone) : undefined}
-                style={{ fontSize: 10, fontWeight: 650, textTransform: "uppercase", letterSpacing: "0.08em", color: groupColor, marginBottom: 6, marginTop: SP.md, cursor: isDoneGroup ? "pointer" : "default" }}>
+                style={{ fontSize: 10, fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.1em", color: groupColor, marginBottom: 8, marginTop: SP.lg, cursor: isDoneGroup ? "pointer" : "default" }}>
                 {isDoneGroup && <span style={{ marginRight: SP.xs }}>{showDone ? "\u25BE" : "\u25B8"}</span>}
                 {g.label} &middot; {items.length}
               </div>
               {(!isDoneGroup || showDone) && items.map((task, idx) => (
                 <div key={task.id} style={{
                   display: "flex", alignItems: "flex-start", gap: 10,
-                  padding: `${SP.sm}px 0`,
+                  padding: `${SP.md}px 0`,
                   borderBottom: `1px solid ${S.border}`,
-                  opacity: isDoneGroup ? 0.4 : 1,
+                  opacity: isDoneGroup ? 0.35 : 1,
                   transition: "opacity 0.15s ease",
                 }}>
                   <button onClick={() => {
@@ -338,7 +338,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
                       style={{ ...S.input, flex: 1, padding: "2px 6px", fontSize: 14 }} />
                   ) : (
                     <span onClick={() => { setEditingTaskId(task.id); setEditTaskBuf(task.text); }}
-                      style={{ flex: 1, fontSize: 14, color: isDoneGroup ? S.textMuted : S.text, lineHeight: 1.5, cursor: "text", textDecoration: isDoneGroup ? "line-through" : "none", textDecorationColor: S.textMuted }}>{task.text}</span>
+                      style={{ flex: 1, fontSize: 14, color: isDoneGroup ? S.textMuted : S.text, lineHeight: 1.6, cursor: "text", textDecoration: isDoneGroup ? "line-through" : "none", textDecorationColor: S.textMuted }}>{task.text}</span>
                   )}
                   <select value={task.status} onChange={e => {
                     const newStatus = e.target.value;
@@ -403,7 +403,7 @@ export default function DetailView({ ctx, mut, doWithUndo, goBack, S, maxW, view
         </div>
         {expandLog && ctx.log.length > 0 && (
           <div style={{ marginTop: SP.md }}>{ctx.log.map(e => (
-            <div key={e.id} style={{ display: "flex", gap: 10, padding: `7px 0`, borderBottom: `1px solid ${S.border}`, alignItems: "baseline" }}>
+            <div key={e.id} style={{ display: "flex", gap: 10, padding: `${SP.sm + 2}px 0`, borderBottom: `1px solid ${S.border}`, alignItems: "baseline" }}>
               <span style={{ fontSize: 12, color: S.textMuted, fontFamily: MONO, minWidth: 78, flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{dateOf(e)}{timeOf(e) ? ` ${timeOf(e)}` : ""}</span>
               <span style={{ fontSize: 13, color: e.dur === "auto" ? S.textMuted : S.textMid, flex: 1, fontStyle: e.dur === "auto" ? "italic" : "normal" }}>{e.text}</span>
               {e.dur !== "auto" && <span style={{ ...S.chip, fontSize: 10, padding: "1px 7px", color: S.textMuted, background: S.textMuted + "12", textTransform: "uppercase" }}>{e.dur}</span>}
