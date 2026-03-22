@@ -18,7 +18,7 @@ export default function QuickLogModal({ quickLog, setQuickLog, live, mut, S }) {
       animation: "overlayIn 0.15s ease-out",
     }}>
       <div onClick={e => e.stopPropagation()} style={{
-        background: S.card, borderRadius: 14, padding: "22px 24px", width: "100%", maxWidth: 420,
+        background: S.cardBg, borderRadius: 14, padding: "22px 24px", width: "100%", maxWidth: 420,
         boxShadow: "0 12px 40px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.1)",
         border: `1px solid ${S.border}`,
         animation: "modalIn 0.2s ease-out",
